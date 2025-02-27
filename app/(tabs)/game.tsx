@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -52,10 +52,8 @@ export default function GameScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       <ThemedView style={styles.content}>
-        <ThemedText style={styles.title}>Today's Game</ThemedText>
-        
         <ThemedView style={styles.gameCard}>
-          <ThemedText style={styles.gameTitle}>Game Placeholder</ThemedText>
+          <ThemedText style={styles.gameTitle}>Today's Game</ThemedText>
           <ThemedText style={styles.gameDescription}>
             This is where the daily game will be displayed. The actual game implementation will be added later.
           </ThemedText>
@@ -133,28 +131,30 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
+    alignItems: 'center',
   },
   gameCard: {
+    width: '100%',
     padding: 20,
     borderRadius: 15,
+    marginTop: 25,
     marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 5,
+    borderWidth: 3,
+    borderColor: Colors.dark.primary,
   },
   gameTitle: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 10,
     textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    letterSpacing: 1,
+    paddingVertical: 5,
   },
   gameDescription: {
     fontSize: 16,

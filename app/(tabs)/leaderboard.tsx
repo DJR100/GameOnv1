@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, FlatList, TouchableOpacity, TextInput } from 'react-native';
+import { StyleSheet, View, FlatList, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -101,7 +101,9 @@ export default function LeaderboardScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       <ThemedView style={styles.content}>
-        <ThemedText style={styles.title}>Leaderboard</ThemedText>
+        <View style={styles.titleContainer}>
+          <ThemedText style={styles.title}>Leaderboard</ThemedText>
+        </View>
         
         <ThemedView style={styles.leaderboardCard}>
           <ThemedText style={styles.subtitle}>Today's Top Players</ThemedText>
@@ -155,12 +157,28 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  titleContainer: {
+    marginTop: 15,
+    marginBottom: 20,
+    paddingTop: 10,
+    alignItems: 'center',
+    width: '100%',
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    marginBottom: 20,
     textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    letterSpacing: 2,
+    paddingVertical: 8,
+    includeFontPadding: true,
+    lineHeight: 40,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 1,
   },
   leaderboardCard: {
     padding: 20,
@@ -171,6 +189,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 5,
+    width: '100%',
+    borderWidth: 3,
+    borderColor: Colors.dark.primary,
   },
   subtitle: {
     fontSize: 20,
