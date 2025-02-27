@@ -157,15 +157,12 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   titleContainer: {
     marginTop: 15,
     marginBottom: 20,
     paddingTop: 10,
     alignItems: 'center',
-    width: '100%',
   },
   title: {
     fontSize: 32,
@@ -189,9 +186,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 5,
-    width: '100%',
-    borderWidth: 3,
-    borderColor: Colors.dark.primary,
   },
   subtitle: {
     fontSize: 20,
