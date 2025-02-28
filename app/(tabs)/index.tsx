@@ -21,7 +21,7 @@ export default function HomeScreen() {
             <ThemedText style={styles.retroLogoText}>GAME</ThemedText>
             <ThemedText style={[styles.retroLogoText, { color: colors.primary }]}>ON</ThemedText>
           </View>
-          <ThemedText style={styles.retroTagline}>Play Daily. Win Big.</ThemedText>
+          <ThemedText style={[styles.retroTagline, styles.retroTaglineBold]}>Play Daily. Win Big.</ThemedText>
         </View>
 
         {/* Game Rules */}
@@ -53,7 +53,7 @@ export default function HomeScreen() {
         {/* Call to Action */}
         <View style={styles.ctaContainer}>
           <ThemedText style={styles.retroCtaText}>
-            Top 3 players win cash prizes daily!
+            Top 3 players win Prizes Daily
           </ThemedText>
         </View>
       </ThemedView>
@@ -108,14 +108,20 @@ const styles = StyleSheet.create({
     lineHeight: 50,
   },
   retroTagline: {
-    fontSize: 18,
+    fontSize: 22,
+    fontWeight: 'bold',
     marginTop: 5,
-    opacity: 0.9,
+    opacity: 1,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    letterSpacing: 1,
+    letterSpacing: 2,
+    textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 1, height: 1 },
+    textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 0,
+    color: '#FFFFFF',
+  },
+  retroTaglineBold: {
+    fontWeight: 'bold',
   },
   rulesCard: {
     width: '100%',

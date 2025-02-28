@@ -1,100 +1,100 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, FlatList, TouchableOpacity, TextInput, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, FlatList, TouchableOpacity, TextInput, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-
-// Define types for our data
-interface Player {
-  id: string;
-  name: string;
-  score: number;
-}
-
-// Mock data for the leaderboard
-const MOCK_LEADERBOARD: Player[] = [
-  { id: '1', name: 'Player1', score: 950 },
-  { id: '2', name: 'Player2', score: 875 },
-  { id: '3', name: 'Player3', score: 820 },
-  { id: '4', name: 'Player4', score: 750 },
-  { id: '5', name: 'Player5', score: 720 },
-  { id: '6', name: 'Player6', score: 690 },
-  { id: '7', name: 'Player7', score: 650 },
-  { id: '8', name: 'Player8', score: 600 },
-  { id: '9', name: 'Player9', score: 580 },
-  { id: '10', name: 'Player10', score: 550 },
-];
+import { getTopScores, ScoreDataWithId } from '@/services/scoreService';
 
 export default function LeaderboardScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   
-  const [leaderboard, setLeaderboard] = useState<Player[]>(MOCK_LEADERBOARD);
-  const [playerName, setPlayerName] = useState('');
+  const [leaderboard, setLeaderboard] = useState<ScoreDataWithId[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showNameInput, setShowNameInput] = useState(false);
-  
-  const handleSubmitName = () => {
-    if (playerName.trim() === '') return;
-    
-    // Check if name already exists
-    if (leaderboard.some(player => player.name === playerName)) {
-      alert('This name is already taken. Please choose another one.');
-      return;
+  const [playerName, setPlayerName] = useState('');
+
+  // Fetch leaderboard data when component mounts
+  useEffect(() => {
+    fetchLeaderboardData();
+  }, []);
+
+  const fetchLeaderboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('Fetching scores for game type: shoot');
+      // Fetch top scores for the "shoot" game type
+      const scores = await getTopScores('shoot', 20);
+      console.log('Received scores:', scores);
+      setLeaderboard(scores);
+    } catch (err) {
+      console.error('Error fetching leaderboard:', err);
+      setError('Failed to load leaderboard data. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    
-    // In a real app, this would submit the score to a backend
-    // For now, we'll just add a mock entry
-    const newPlayer: Player = {
-      id: (leaderboard.length + 1).toString(),
-      name: playerName,
-      score: Math.floor(Math.random() * 500) + 500, // Random score between 500-1000
-    };
-    
-    const newLeaderboard = [...leaderboard, newPlayer].sort((a, b) => b.score - a.score);
-    setLeaderboard(newLeaderboard);
-    setShowNameInput(false);
-    setPlayerName('');
   };
 
-  const renderLeaderboardItem = ({ item, index }: { item: Player; index: number }) => {
-    // Determine if this player is in the top 3 (prize winner)
-    const isPrizeWinner = index < 3;
+  const handleSubmitName = () => {
+    // This function would be used if you want to add manual score entry from the leaderboard
+    // For now, we'll just hide the input
+    setShowNameInput(false);
+  };
+
+  const renderLeaderboardItem = ({ item, index }: { item: ScoreDataWithId, index: number }) => {
+    const isTopThree = index < 3;
+    
+    // Define softer metallic colors for top 3 positions
+    const getPositionColor = (position: number) => {
+      switch (position) {
+        case 0: return { background: '#FFD700AA', text: '#FFFFFF' }; // Brighter gold (increased opacity)
+        case 1: return { background: '#E8E8E8AA', text: '#FFFFFF' }; // Brighter silver
+        case 2: return { background: '#CD853FAA', text: '#FFFFFF' }; // Brighter bronze
+        default: return { background: colors.card, text: colors.text };
+      }
+    };
+    
+    const positionColors = getPositionColor(index);
     
     return (
-      <ThemedView 
-        style={[
-          styles.leaderboardItem, 
-          { backgroundColor: isPrizeWinner ? colors.card : 'transparent' }
-        ]}
-      >
-        <View style={[styles.rankContainer, { backgroundColor: getMedalColor(index) }]}>
-          <ThemedText style={styles.rankText}>{index + 1}</ThemedText>
+      <View style={[
+        styles.leaderboardItem, 
+        { backgroundColor: positionColors.background }
+      ]}>
+        <View style={styles.rankContainer}>
+          <ThemedText style={[
+            styles.rankText, 
+            isTopThree && { color: positionColors.text }
+          ]}>
+            {index + 1}
+          </ThemedText>
         </View>
         
-        <ThemedText style={styles.playerName}>{item.name}</ThemedText>
+        <View style={styles.playerInfo}>
+          <ThemedText style={[
+            styles.playerName,
+            isTopThree && { color: positionColors.text }
+          ]}>
+            {item.playerName}
+          </ThemedText>
+          <ThemedText style={styles.dateText}>
+            {new Date(item.timestamp).toLocaleDateString()}
+          </ThemedText>
+        </View>
         
-        <ThemedText style={styles.scoreText}>{item.score}</ThemedText>
-        
-        {isPrizeWinner && (
-          <View style={styles.prizeIndicator}>
-            <ThemedText style={styles.prizeText}>$</ThemedText>
-          </View>
-        )}
-      </ThemedView>
+        <ThemedText style={[
+          styles.scoreText,
+          isTopThree && { color: positionColors.text }
+        ]}>
+          {item.score}
+        </ThemedText>
+      </View>
     );
-  };
-  
-  // Helper function to get medal colors
-  const getMedalColor = (index: number): string => {
-    switch (index) {
-      case 0: return '#FFD700'; // Gold
-      case 1: return '#C0C0C0'; // Silver
-      case 2: return '#CD7F32'; // Bronze
-      default: return colors.primary;
-    }
   };
 
   return (
@@ -103,47 +103,34 @@ export default function LeaderboardScreen() {
       <ThemedView style={styles.content}>
         <View style={styles.titleContainer}>
           <ThemedText style={styles.title}>Leaderboard</ThemedText>
+          <TouchableOpacity 
+            style={[styles.refreshButton, { backgroundColor: colors.secondary }]}
+            onPress={fetchLeaderboardData}
+          >
+            <ThemedText style={styles.buttonText}>Refresh</ThemedText>
+          </TouchableOpacity>
         </View>
         
         <ThemedView style={styles.leaderboardCard}>
-          <ThemedText style={styles.subtitle}>Today's Top Players</ThemedText>
-          
-          <FlatList
-            data={leaderboard}
-            renderItem={renderLeaderboardItem}
-            keyExtractor={item => item.id}
-            contentContainerStyle={styles.leaderboardList}
-          />
-          
-          {showNameInput ? (
-            <View style={styles.nameInputContainer}>
-              <TextInput
-                style={[styles.nameInput, { color: colors.text, borderColor: colors.border }]}
-                placeholder="Enter your name"
-                placeholderTextColor={colors.icon}
-                value={playerName}
-                onChangeText={setPlayerName}
-                maxLength={15}
-              />
-              <TouchableOpacity 
-                style={[styles.submitButton, { backgroundColor: colors.primary }]}
-                onPress={handleSubmitName}
-              >
-                <ThemedText style={styles.buttonText}>Submit</ThemedText>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity 
-              style={[styles.addScoreButton, { backgroundColor: colors.accent }]}
-              onPress={() => setShowNameInput(true)}
-            >
-              <ThemedText style={styles.buttonText}>Add Your Score</ThemedText>
-            </TouchableOpacity>
-          )}
-          
+          <ThemedText style={styles.subtitle}>Top Players</ThemedText>
           <ThemedText style={styles.prizeNote}>
-            Top 3 players win cash prizes daily!
+            Top 3 players win prizes daily!
           </ThemedText>
+          
+          {loading ? (
+            <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+          ) : error ? (
+            <ThemedText style={styles.errorText}>{error}</ThemedText>
+          ) : leaderboard.length === 0 ? (
+            <ThemedText style={styles.emptyText}>No scores yet. Be the first to play!</ThemedText>
+          ) : (
+            <FlatList
+              data={leaderboard}
+              renderItem={renderLeaderboardItem}
+              keyExtractor={item => item.id}
+              contentContainerStyle={styles.leaderboardList}
+            />
+          )}
         </ThemedView>
       </ThemedView>
     </SafeAreaView>
@@ -156,124 +143,136 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: 16,
   },
   titleContainer: {
-    marginTop: 15,
-    marginBottom: 20,
-    paddingTop: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 16,
+    marginTop: 45,
+    paddingHorizontal: 8,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
-    textAlign: 'center',
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    letterSpacing: 2,
-    paddingVertical: 8,
-    includeFontPadding: true,
-    lineHeight: 40,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 1,
   },
-  leaderboardCard: {
-    padding: 20,
-    borderRadius: 15,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 5,
-  },
-  subtitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  leaderboardList: {
-    paddingVertical: 10,
-  },
-  leaderboardItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    marginBottom: 8,
-  },
-  rankContainer: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  rankText: {
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  playerName: {
-    flex: 1,
-    fontSize: 16,
-  },
-  scoreText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginRight: 10,
-  },
-  prizeIndicator: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#FFD700',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  prizeText: {
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  nameInputContainer: {
-    flexDirection: 'row',
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  nameInput: {
-    flex: 1,
-    height: 50,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    marginRight: 10,
-  },
-  submitButton: {
-    paddingHorizontal: 20,
-    height: 50,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addScoreButton: {
-    height: 50,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 10,
+  refreshButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
   buttonText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
+  },
+  leaderboardCard: {
+    flex: 1,
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  subtitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  leaderboardList: {
+    paddingBottom: 60,
+  },
+  leaderboardItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    marginVertical: 6,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  rankContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  rankText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  playerInfo: {
+    flex: 1,
+  },
+  playerName: {
     fontSize: 16,
+    fontWeight: 'bold',
+    opacity: 1,
+  },
+  dateText: {
+    fontSize: 12,
+    opacity: 0.8,
+    marginTop: 2,
+  },
+  scoreText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 8,
+    opacity: 1,
   },
   prizeNote: {
     textAlign: 'center',
     fontStyle: 'italic',
-    marginTop: 10,
-    opacity: 0.7,
+    marginBottom: 20,
+    opacity: 0.8,
+    color: '#FFFFFF',
+    fontSize: 14,
+  },
+  loader: {
+    marginVertical: 20,
+  },
+  errorText: {
+    textAlign: 'center',
+    color: 'red',
+    marginVertical: 20,
+  },
+  emptyText: {
+    textAlign: 'center',
+    marginVertical: 20,
+  },
+  nameInputContainer: {
+    marginVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  nameInput: {
+    flex: 1,
+    height: 40,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginRight: 8,
+  },
+  submitButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  addScoreButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignSelf: 'center',
+    marginVertical: 16,
   },
 }); 

@@ -11,6 +11,7 @@ import {
   SafeAreaView,
   Image,
   Platform,
+  Easing,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -18,11 +19,11 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { Easing } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
+import ScoreSubmissionModal from '../../components/ScoreSubmissionModal';
 
 const { width, height } = Dimensions.get('window');
-const PLAYER_RADIUS = 50; // Center "hit zone" radius
+const PLAYER_RADIUS = 50; // Center "hit zone" radius 
 const SPAWN_RADIUS = Math.min(width, height) * 0.4; // Enemies spawn outside this radius
 const ENEMY_SIZE = 30;
 const BULLET_SPEED = 15;
@@ -79,6 +80,7 @@ export default function ShootGame() {
   const [ammo, setAmmo] = useState(30);
   const [reloading, setReloading] = useState(false);
   const [reloadProgress, setReloadProgress] = useState(0); // Track reload progress (0-100)
+  const [showScoreModal, setShowScoreModal] = useState(false);
   
   // Spawn manager state
   const [difficultyLevel, setDifficultyLevel] = useState(1);
@@ -687,6 +689,13 @@ export default function ShootGame() {
             <Text style={styles.buttonText}>Home</Text>
           </TouchableOpacity>
         </View>
+        
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: colors.primary }]}
+          onPress={() => setShowScoreModal(true)}
+        >
+          <Text style={styles.buttonText}>SUBMIT SCORE</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -883,6 +892,14 @@ export default function ShootGame() {
         {gameState === 'paused' && renderPauseScreen()}
         {gameState === 'game_over' && renderGameOver()}
       </View>
+      
+      {/* Score submission modal */}
+      <ScoreSubmissionModal
+        visible={showScoreModal}
+        onClose={() => setShowScoreModal(false)}
+        score={score}
+        gameType="shoot"
+      />
     </SafeAreaView>
   );
 }
