@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, FlatList, TouchableOpacity, TextInput, Platform, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, FlatList, TouchableOpacity, TextInput, Platform, ActivityIndicator, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -7,6 +7,7 @@ import { Colors } from '@/constants/Colors';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { getTopScores, ScoreDataWithId } from '@/services/scoreService';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function LeaderboardScreen() {
   const colorScheme = useColorScheme();
@@ -101,28 +102,62 @@ export default function LeaderboardScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       <ThemedView style={styles.content}>
+        {/* Logo */}
+        <View style={styles.logoContainer}>
+          <Text style={[styles.logoText, { color: colors.text }]}>
+            Game<Text style={{ color: colors.primary, fontSize: 42 }}>On</Text>
+          </Text>
+        </View>
+
         <View style={styles.titleContainer}>
-          <ThemedText style={styles.title}>Leaderboard</ThemedText>
+          <View style={styles.titleContent}>
+            <ThemedText style={styles.title}>Leaderboard</ThemedText>
+            <ThemedText style={styles.subtitle}>Today's Top Players</ThemedText>
+          </View>
           <TouchableOpacity 
-            style={[styles.refreshButton, { backgroundColor: colors.secondary }]}
+            style={[styles.refreshButton, { 
+              backgroundColor: colors.primary,
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 8,
+            }]}
             onPress={fetchLeaderboardData}
           >
             <ThemedText style={styles.buttonText}>Refresh</ThemedText>
           </TouchableOpacity>
         </View>
         
-        <ThemedView style={styles.leaderboardCard}>
-          <ThemedText style={styles.subtitle}>Top Players</ThemedText>
-          <ThemedText style={styles.prizeNote}>
-            Top 3 players win prizes daily!
-          </ThemedText>
+        <ThemedView style={[styles.leaderboardCard, { backgroundColor: colors.card }]}>
+          <View style={[styles.promoCard, { backgroundColor: colors.primary + '15' }]}>
+            <View style={styles.promoItem}>
+              <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
+                <Ionicons name="trophy" size={28} color="#fff" />
+              </View>
+              <View style={styles.promoTextContainer}>
+                <ThemedText style={[styles.promoTextTitle, { color: colors.text }]}>
+                  Daily Prizes
+                </ThemedText>
+                <ThemedText style={[styles.promoTextSubtitle, { color: colors.text + 'CC' }]}>
+                  Top 3 players win exclusive rewards!
+                </ThemedText>
+              </View>
+            </View>
+          </View>
           
           {loading ? (
             <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
           ) : error ? (
             <ThemedText style={styles.errorText}>{error}</ThemedText>
           ) : leaderboard.length === 0 ? (
-            <ThemedText style={styles.emptyText}>No scores yet. Be the first to play!</ThemedText>
+            <View style={styles.emptyContainer}>
+              <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
+                <Ionicons name="game-controller" size={32} color="#fff" />
+              </View>
+              <ThemedText style={styles.emptyTitle}>No Scores Yet</ThemedText>
+              <ThemedText style={styles.emptyText}>Be the first to play and set a high score!</ThemedText>
+            </View>
           ) : (
             <FlatList
               data={leaderboard}
@@ -145,22 +180,86 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  logoContainer: {
+    marginBottom: 20,
+    marginTop: Platform.OS === 'ios' ? 50 : 30,
+  },
+  logoText: {
+    fontSize: 42,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
   titleContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
-    marginTop: 45,
     paddingHorizontal: 8,
+    marginTop: 8,
+  },
+  titleContent: {
+    flex: 1,
+    paddingRight: 16,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
+    marginBottom: 4,
+    includeFontPadding: false,
+    paddingTop: 4,
+  },
+  subtitle: {
+    fontSize: 16,
+    opacity: 0.8,
+  },
+  promoCard: {
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 20,
+  },
+  promoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  promoTextContainer: {
+    flex: 1,
+  },
+  promoTextTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  promoTextSubtitle: {
+    fontSize: 14,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginVertical: 16,
+  },
+  emptyText: {
+    fontSize: 16,
+    textAlign: 'center',
+    opacity: 0.8,
+    lineHeight: 22,
   },
   refreshButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginLeft: 16,
   },
   buttonText: {
     color: '#FFFFFF',
@@ -177,12 +276,6 @@ const styles = StyleSheet.create({
     elevation: 3,
     marginTop: 8,
     marginBottom: 20,
-  },
-  subtitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
   },
   leaderboardList: {
     paddingBottom: 60,
@@ -230,14 +323,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     opacity: 1,
   },
-  prizeNote: {
-    textAlign: 'center',
-    fontStyle: 'italic',
-    marginBottom: 20,
-    opacity: 0.8,
-    color: '#FFFFFF',
-    fontSize: 14,
-  },
   loader: {
     marginVertical: 20,
   },
@@ -245,34 +330,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: 'red',
     marginVertical: 20,
-  },
-  emptyText: {
-    textAlign: 'center',
-    marginVertical: 20,
-  },
-  nameInputContainer: {
-    marginVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  nameInput: {
-    flex: 1,
-    height: 40,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    marginRight: 8,
-  },
-  submitButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  addScoreButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignSelf: 'center',
-    marginVertical: 16,
   },
 }); 

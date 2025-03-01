@@ -8,6 +8,7 @@ import {
   Image,
   SafeAreaView,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -15,6 +16,7 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
+import { Ionicons } from '@expo/vector-icons';
 
 // Define a type for historical games
 interface HistoricalGame {
@@ -28,7 +30,14 @@ interface HistoricalGame {
 
 // This would normally come from an API or database
 const mockHistoricalGames: HistoricalGame[] = [
-  // Empty for now - will be populated as games are created
+  {
+    id: '1',
+    title: 'Classic Pong',
+    description: 'The original arcade classic! Break blocks and set high scores in this timeless game.',
+    date: '1972',
+    imageUrl: null,
+    route: '/historical/pong',
+  },
 ];
 
 export default function HistoricalGamesScreen() {
@@ -37,7 +46,6 @@ export default function HistoricalGamesScreen() {
   const colors = Colors[colorScheme ?? 'light'];
 
   const navigateToGame = (game: HistoricalGame) => {
-    // Navigate to the selected game
     router.push(game.route as any);
   };
 
@@ -46,18 +54,18 @@ export default function HistoricalGamesScreen() {
       style={[styles.gameCard, { backgroundColor: colors.card }]}
       onPress={() => navigateToGame(item)}
     >
-      {item.imageUrl ? (
-        <Image source={{ uri: item.imageUrl }} style={styles.gameImage} />
-      ) : (
-        <View style={[styles.placeholderImage, { backgroundColor: colors.border }]}>
-          <Text style={[styles.placeholderText, { color: colors.text }]}>
-            {item.title.charAt(0)}
-          </Text>
-        </View>
-      )}
+      <View style={[styles.gameImageContainer, { backgroundColor: colors.primary + '15' }]}>
+        {item.imageUrl ? (
+          <Image source={{ uri: item.imageUrl }} style={styles.gameImage} />
+        ) : (
+          <View style={styles.placeholderImage}>
+            <Ionicons name="game-controller" size={48} color={colors.primary} />
+          </View>
+        )}
+      </View>
       <View style={styles.gameInfo}>
         <Text style={[styles.gameTitle, { color: colors.text }]}>{item.title}</Text>
-        <Text style={[styles.gameDate, { color: colors.text }]}>{item.date}</Text>
+        <Text style={[styles.gameDate, { color: colors.text + 'CC' }]}>{item.date}</Text>
         <Text style={[styles.gameDescription, { color: colors.text }]} numberOfLines={2}>
           {item.description}
         </Text>
@@ -68,35 +76,70 @@ export default function HistoricalGamesScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-      <ThemedView style={styles.header}>
-        <ThemedText style={styles.headerTitle}>Historical Games</ThemedText>
-      </ThemedView>
-
-      {mockHistoricalGames.length > 0 ? (
-        <FlatList
-          data={mockHistoricalGames}
-          renderItem={renderGameItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-        />
-      ) : (
-        <View style={styles.emptyContainer}>
-          <Image 
-            source={require('@/assets/images/splash-icon.png')} 
-            style={styles.emptyImage}
-          />
-          <ThemedText style={styles.emptyTitle}>No Historical Games Yet</ThemedText>
-          <ThemedText style={styles.emptyText}>
-            As you play daily games, they will appear here for you to replay anytime.
-          </ThemedText>
-          <TouchableOpacity
-            style={[styles.playButton, { backgroundColor: colors.primary }]}
-            onPress={() => router.push('/game' as any)}
-          >
-            <Text style={styles.playButtonText}>Play Today's Game</Text>
-          </TouchableOpacity>
+      
+      <View style={styles.content}>
+        {/* Logo */}
+        <View style={styles.logoContainer}>
+          <Text style={[styles.logoText, { color: colors.text }]}>
+            Game<Text style={{ color: colors.primary }}>On</Text>
+          </Text>
         </View>
-      )}
+
+        <View style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <ThemedText style={styles.headerTitle}>Game History</ThemedText>
+            <ThemedText style={styles.headerSubtitle}>Play Previous Games</ThemedText>
+          </View>
+        </View>
+
+        <View style={[styles.promoCard, { backgroundColor: colors.primary + '15' }]}>
+          <View style={styles.promoItem}>
+            <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
+              <Ionicons name="time" size={28} color="#fff" />
+            </View>
+            <View style={styles.promoTextContainer}>
+              <Text style={[styles.promoTextTitle, { color: colors.text }]}>
+                Timeless Classics
+              </Text>
+              <Text style={[styles.promoTextSubtitle, { color: colors.text + 'CC' }]}>
+                Replay your favorite games anytime!
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {mockHistoricalGames.length > 0 ? (
+          <FlatList
+            data={mockHistoricalGames}
+            renderItem={renderGameItem}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+          />
+        ) : (
+          <View style={styles.emptyContainer}>
+            <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
+              <Ionicons name="game-controller" size={32} color="#fff" />
+            </View>
+            <ThemedText style={styles.emptyTitle}>No Games Yet</ThemedText>
+            <ThemedText style={styles.emptyText}>
+              Play today's game to unlock historical replays!
+            </ThemedText>
+            <TouchableOpacity
+              style={[styles.playButton, { 
+                backgroundColor: colors.primary,
+                shadowColor: colors.primary,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+                elevation: 8,
+              }]}
+              onPress={() => router.push('/game' as any)}
+            >
+              <Text style={styles.playButtonText}>Play Today's Game</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -107,42 +150,105 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
+  content: {
+    flex: 1,
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
+  },
+  logoContainer: {
+    marginBottom: 20,
+    marginTop: Platform.OS === 'ios' ? 50 : 30,
+  },
+  logoText: {
+    fontSize: 42,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 8,
+    marginTop: 16,
+    zIndex: 1,
+    backgroundColor: 'transparent',
+    paddingTop: 8,
+  },
+  headerContent: {
+    flex: 1,
+    paddingRight: 16,
+    zIndex: 2,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 32,
     fontWeight: 'bold',
+    marginBottom: 4,
+    includeFontPadding: false,
+    paddingTop: 8,
+    zIndex: 2,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    opacity: 0.8,
+  },
+  promoCard: {
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 20,
+  },
+  promoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  promoTextContainer: {
+    flex: 1,
+  },
+  promoTextTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  promoTextSubtitle: {
+    fontSize: 14,
   },
   listContent: {
-    padding: 16,
+    paddingTop: 8,
   },
   gameCard: {
     flexDirection: 'row',
     marginBottom: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: 'hidden',
-    elevation: 2,
+    elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  gameImage: {
-    width: 100,
-    height: 100,
-  },
-  placeholderImage: {
+  gameImageContainer: {
     width: 100,
     height: 100,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  placeholderText: {
-    fontSize: 32,
-    fontWeight: 'bold',
+  gameImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  placeholderImage: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   gameInfo: {
     flex: 1,
@@ -156,7 +262,6 @@ const styles = StyleSheet.create({
   gameDate: {
     fontSize: 14,
     marginBottom: 8,
-    opacity: 0.7,
   },
   gameDescription: {
     fontSize: 14,
@@ -168,37 +273,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 24,
   },
-  emptyImage: {
-    width: width * 0.5,
-    height: width * 0.5,
-    marginBottom: 24,
-    opacity: 0.7,
-  },
   emptyTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 12,
+    marginVertical: 16,
     textAlign: 'center',
   },
   emptyText: {
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 24,
-    opacity: 0.7,
+    opacity: 0.8,
     lineHeight: 22,
+    marginBottom: 24,
   },
   playButton: {
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 8,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
+    borderRadius: 12,
   },
   playButtonText: {
-    color: 'white',
+    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },

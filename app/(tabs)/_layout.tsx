@@ -1,6 +1,7 @@
 import React from 'react';
 import { Platform } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -56,10 +57,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="Shoot"
+        name="profile"
         options={{
-          title: 'Shooter',
-          tabBarIcon: ({ color }) => <FontAwesome5 name="crosshairs" size={22} color={color} />,
+          title: 'Profile',
+          tabBarIcon: ({ color }) => <Ionicons name="person" size={24} color={color} />
         }}
       />
     </Tabs>
