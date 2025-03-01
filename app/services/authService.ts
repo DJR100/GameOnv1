@@ -1,12 +1,9 @@
 import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
   signInWithCredential,
   GoogleAuthProvider,
   User,
 } from 'firebase/auth';
-import { auth, googleProvider } from '../lib/firebase';
+import { auth } from '../lib/firebase';
 import * as Google from 'expo-auth-session/providers/google';
 
 export const authService = {
@@ -41,4 +38,4 @@ export const authService = {
   },
 
   // ... rest of your existing code
-}; 
+};

@@ -1,6 +1,5 @@
 import React from 'react';
 import { Platform } from 'react-native';
-import { FontAwesome5 } from '@expo/vector-icons';
 import { Ionicons } from '@expo/vector-icons';
 
 import { HapticTab } from '@/components/HapticTab';
