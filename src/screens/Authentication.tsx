@@ -9,8 +9,8 @@ import {
   Platform,
   Alert
 } from 'react-native';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../config/firebase';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/app/lib/firebase';
 
 const Authentication = () => {
   const [email, setEmail] = useState('');

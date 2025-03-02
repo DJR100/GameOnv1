@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { getAuth, onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
+import { onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { auth } from '@/firebase/config';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
@@ -24,12 +24,12 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(false);
 
   // Set up Google Auth Request
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    
-    iosClientId: "397096414574-c6vo7gut9mm58pi818bleht0ovakn36l.apps.googleusercontent.com", // Leave this for now
-    webClientId: "397096414574-gfgea3ilt36i1c1dhn6b2h008omg50jg.apps.googleusercontent.com", // Update this line with your client ID
-    responseType: ResponseType.IdToken,
-  });
+  const [request, response, promptAsync] = Google
+      .useAuthRequest({
+        iosClientId: "397096414574-c6vo7gut9mm58pi818bleht0ovakn36l.apps.googleusercontent.com", // Leave this for now
+        webClientId: "397096414574-gfgea3ilt36i1c1dhn6b2h008omg50jg.apps.googleusercontent.com", // Update this line with your client ID
+        responseType: ResponseType.IdToken,
+      });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -79,11 +79,15 @@ export default function ProfileScreen() {
       
       try {
         // Create Firebase credential with Google ID token
-        const credential = GoogleAuthProvider.credential(id_token);
-        
+        const credential = GoogleAuthProvider
+            .credential(
+                id_token
+            );
         // Sign in with credential
         const userCredential = await signInWithCredential(auth, credential);
         setUserInfo(userCredential.user as any); // Type assertion to fix type error
+
+        console.log('User signed in with Google:', userCredential.user);
       } catch (error) {
         console.error('Error signing in with Google:', error);
       } finally {
@@ -308,7 +312,7 @@ export default function ProfileScreen() {
               shadowRadius: 4,
               elevation: 8,
             }]}
-            onPress={() => promptAsync()}
+            onPress={() => promptAsync({showInRecents: true})}
             disabled={loading}
           >
             <View style={styles.buttonContent}>

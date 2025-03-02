@@ -24,8 +24,8 @@
         <action android:name="android.intent.action.VIEW"/>
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
-        <data android:scheme="gameon"/>
-        <data android:scheme="com.gameon.app"/>
+        <data android:scheme="myapp"/>
+        <data android:scheme="com.djr.GameOn"/>
         <data android:scheme="exp+gameon-v1"/>
       </intent-filter>
     </activity>
