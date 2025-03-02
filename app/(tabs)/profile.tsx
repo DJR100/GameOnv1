@@ -2,9 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { getAuth, onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { auth } from '@/firebase/config';
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import { ResponseType } from 'expo-auth-session';
+
+// Initialize WebBrowser for OAuth
+WebBrowser.maybeCompleteAuthSession();
 
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
@@ -14,6 +20,16 @@ export default function ProfileScreen() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [userInfo, setUserInfo] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  // Set up Google Auth Request
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    
+    iosClientId: "397096414574-c6vo7gut9mm58pi818bleht0ovakn36l.apps.googleusercontent.com", // Leave this for now
+    webClientId: "397096414574-gfgea3ilt36i1c1dhn6b2h008omg50jg.apps.googleusercontent.com", // Update this line with your client ID
+    responseType: ResponseType.IdToken,
+  });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -25,6 +41,10 @@ export default function ProfileScreen() {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    handleSignInResponse();
+  }, [response]);
 
   const handleAuth = async () => {
     try {
@@ -49,6 +69,26 @@ export default function ProfileScreen() {
       Alert.alert('Success', 'Signed out successfully!');
     } catch (error: any) {
       Alert.alert('Error', 'Failed to sign out');
+    }
+  };
+
+  const handleSignInResponse = async () => {
+    if (response?.type === 'success') {
+      setLoading(true);
+      const { id_token } = response.params;
+      
+      try {
+        // Create Firebase credential with Google ID token
+        const credential = GoogleAuthProvider.credential(id_token);
+        
+        // Sign in with credential
+        const userCredential = await signInWithCredential(auth, credential);
+        setUserInfo(userCredential.user as any); // Type assertion to fix type error
+      } catch (error) {
+        console.error('Error signing in with Google:', error);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -163,8 +203,8 @@ export default function ProfileScreen() {
 
   // Show authenticated user profile
   if (user) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.profileCircle, { backgroundColor: colors.border }]}>
           <Ionicons name="person" size={75} color={colors.text} />
         </View>
@@ -173,12 +213,12 @@ export default function ProfileScreen() {
           {user.email}
         </Text>
 
-        <Text style={[styles.memberText, { color: colors.text }]}>
+      <Text style={[styles.memberText, { color: colors.text }]}>
           Member since {user.metadata.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString() : 'N/A'}
-        </Text>
+      </Text>
 
-        <View style={[styles.statsContainer, { backgroundColor: colors.card }]}>
-          <View style={styles.statItem}>
+      <View style={[styles.statsContainer, { backgroundColor: colors.card }]}>
+        <View style={styles.statItem}>
             <Text style={[styles.statValue, { color: colors.text }]}>
               {Math.floor((Date.now() - new Date(user.metadata.creationTime || Date.now()).getTime()) / (1000 * 60 * 60 * 24))}
             </Text>
@@ -261,20 +301,22 @@ export default function ProfileScreen() {
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={[styles.authButton, { 
-              backgroundColor: colors.primary,
-              shadowColor: colors.primary,
+            style={[styles.authButton, styles.googleButton, {
+              shadowColor: '#4285F4',
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.3,
               shadowRadius: 4,
               elevation: 8,
             }]}
-            onPress={() => {
-              setIsLogin(true);
-              setShowAuthForm(true);
-            }}
+            onPress={() => promptAsync()}
+            disabled={loading}
           >
-            <Text style={[styles.buttonText, { color: '#fff' }]}>Log In</Text>
+            <View style={styles.buttonContent}>
+              <Ionicons name="logo-google" size={24} color="white" style={styles.buttonIcon} />
+              <Text style={styles.buttonText}>
+                {loading ? 'Signing in...' : 'Continue with Google'}
+              </Text>
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -377,6 +419,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 18,
     fontWeight: '600',
+    color: 'white',
   },
   formContainer: {
     width: '90%',
@@ -481,5 +524,17 @@ const styles = StyleSheet.create({
   footerLink: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  googleButton: {
+    backgroundColor: '#4285F4',
+    marginBottom: 12,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonIcon: {
+    marginRight: 10,
   },
 }); 

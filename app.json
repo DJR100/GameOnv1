@@ -12,7 +12,12 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.djr.GameOn",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "config": {
+          "googleSignIn": {
+            "reservedClientId": "com.googleusercontent.apps.397096414574-c6vo7gut9mm58pi818bleht0vakn36l"
+          }
+        }
       }
     },
     "android": {
