@@ -3,14 +3,42 @@ import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert, KeyboardAvo
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
-import { auth } from '@/firebase/config';
+import { auth, db } from '@/firebase/config';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { ResponseType } from 'expo-auth-session';
+import {collection, doc, getDoc, setDoc} from "firebase/firestore";
 
 // Initialize WebBrowser for OAuth
 WebBrowser.maybeCompleteAuthSession();
+
+async function upsertUser(user: User) {
+  try {
+    if (!user.uid) {
+      throw new Error("User ID is required for upsert operation.");
+    }
+
+    const userTable = collection(db, "users");
+    const userRef = doc(userTable, user.uid); // Ensure user.id is not empty
+
+    // Convert class instance to plain JavaScript object
+    const userData = JSON.parse(JSON.stringify(user));
+
+    // Check if user exists in Firestore
+    const docSnapshot = await getDoc(userRef);
+
+    if (docSnapshot.exists()) {
+      await setDoc(userRef, userData, { merge: true }); // Merge updates
+    } else {
+      await setDoc(userRef, userData); // Insert new user
+    }
+
+    console.log("User upserted successfully");
+  } catch (error) {
+    console.error("Error upserting user:", error);
+  }
+}
 
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
@@ -88,6 +116,10 @@ export default function ProfileScreen() {
         setUserInfo(userCredential.user as any); // Type assertion to fix type error
 
         console.log('User signed in with Google:', userCredential.user);
+
+        // Upsert this user in firestore
+        await upsertUser(userCredential.user);
+
       } catch (error) {
         console.error('Error signing in with Google:', error);
       } finally {
