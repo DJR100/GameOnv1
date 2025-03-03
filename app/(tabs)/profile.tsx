@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Image, ScrollView } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
@@ -40,6 +40,65 @@ async function upsertUser(user: User) {
   }
 }
 
+interface GameStats {
+  dailyGames: { [key: string]: number };
+  personalBest: {
+    currentStreak: number;
+    longestStreak: number;
+    highestScore: number;
+  };
+  weeklyGames: number;
+  monthlyGames: number;
+}
+
+interface UserStats {
+  gameStats: GameStats;
+  lastPlayed: Date;
+}
+
+const getActivityStats = (stats: UserStats | null, tab: string): number => {
+  if (!stats?.gameStats) return 0;
+  
+  switch (tab) {
+    case 'Day':
+      const today = new Date().toISOString().split('T')[0];
+      return stats.gameStats.dailyGames[today] || 0;
+    case 'Week':
+      return stats.gameStats.weeklyGames || 0;
+    case 'Month':
+      return stats.gameStats.monthlyGames || 0;
+    default:
+      return 0;
+  }
+};
+
+const handleDeleteAccount = async () => {
+  Alert.alert(
+    "Delete Account",
+    "Are you sure you want to delete your account? This action cannot be undone.",
+    [
+      {
+        text: "Cancel",
+        style: "cancel"
+      },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            if (user) {
+              await user.delete();
+              Alert.alert("Success", "Your account has been deleted.");
+            }
+          } catch (error: any) {
+            Alert.alert("Error", error.message);
+          }
+        }
+      }
+    ]
+  );
+};
+
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -50,6 +109,8 @@ export default function ProfileScreen() {
   const [password, setPassword] = useState('');
   const [userInfo, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('Day');
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
 
   // Set up Google Auth Request
   const [request, response, promptAsync] = Google
@@ -239,35 +300,92 @@ export default function ProfileScreen() {
 
   // Show authenticated user profile
   if (user) {
-  return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.profileCircle, { backgroundColor: colors.border }]}>
-          <Ionicons name="person" size={75} color={colors.text} />
-        </View>
-
-        <Text style={[styles.emailText, { color: colors.text }]}>
-          {user.email}
-        </Text>
-
-      <Text style={[styles.memberText, { color: colors.text }]}>
-          Member since {user.metadata.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString() : 'N/A'}
-      </Text>
-
-      <View style={[styles.statsContainer, { backgroundColor: colors.card }]}>
-        <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: colors.text }]}>
-              {Math.floor((Date.now() - new Date(user.metadata.creationTime || Date.now()).getTime()) / (1000 * 60 * 60 * 24))}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.text }]}>Days as Member</Text>
+    return (
+      <View style={[styles.container]}>
+        <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+          {/* Centered Profile Header */}
+          <View style={styles.profileHeader}>
+            <View style={styles.profileImageContainer}>
+              <Image 
+                source={{ uri: user.photoURL || 'https://example.com/default-profile.jpg' }} 
+                style={styles.profileImage} 
+              />
+            </View>
+            <Text style={styles.profileName}>{user.displayName || 'Player'}</Text>
+            <Text style={styles.profileEmail}>{user.email}</Text>
           </View>
-        </View>
 
-        <TouchableOpacity
-          style={[styles.signOutButton, { backgroundColor: colors.primary }]}
-          onPress={handleSignOut}
-        >
-          <Text style={styles.buttonText}>Sign Out</Text>
-        </TouchableOpacity>
+          {/* Stats Section */}
+          <View style={styles.statsSection}>
+            {/* Stats Toggle */}
+            <View style={styles.tabContainer}>
+              {['Day', 'Week', 'Month'].map((tab) => (
+                <TouchableOpacity 
+                  key={tab}
+                  style={[
+                    styles.tab,
+                    activeTab === tab && styles.activeTab
+                  ]}
+                  onPress={() => setActiveTab(tab)}
+                >
+                  <Text style={[
+                    styles.tabText,
+                    activeTab === tab && styles.activeTabText
+                  ]}>
+                    {tab}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Stats Display */}
+            <View style={styles.statsCard}>
+              <Text style={styles.statsValue}>
+                {getActivityStats(userStats, activeTab)}
+              </Text>
+              <Text style={styles.statsLabel}>Games Played</Text>
+              <Text style={styles.statsSubtext}>
+                {activeTab === 'Day' ? 'Today' : 
+                 activeTab === 'Week' ? 'Last 7 Days' : 
+                 'Last 30 Days'}
+              </Text>
+            </View>
+
+            {/* Streak and High Score */}
+            <View style={styles.achievementsContainer}>
+              <View style={styles.achievementCard}>
+                <Ionicons name="flame" size={24} color="#FF4B4B" />
+                <Text style={styles.achievementValue}>
+                  {userStats?.gameStats?.personalBest?.currentStreak || 0}
+                </Text>
+                <Text style={styles.achievementLabel}>Current Streak</Text>
+              </View>
+              <View style={styles.achievementCard}>
+                <Ionicons name="trophy" size={24} color="#FFD700" />
+                <Text style={styles.achievementValue}>
+                  {userStats?.gameStats?.personalBest?.highestScore || 0}
+                </Text>
+                <Text style={styles.achievementLabel}>High Score</Text>
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* Bottom Buttons */}
+        <View style={styles.buttonGroup}>
+          <TouchableOpacity
+            style={styles.signOutButton}
+            onPress={handleSignOut}
+          >
+            <Text style={styles.buttonText}>Sign Out</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.deleteAccountButton}
+            onPress={handleDeleteAccount}
+          >
+            <Text style={styles.buttonText}>Delete Account</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -381,7 +499,134 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#000',
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  profileHeader: {
+    alignItems: 'center',
+    paddingTop: Platform.OS === 'ios' ? 60 : 20,
+    paddingBottom: 20,
+  },
+  profileImageContainer: {
+    padding: 3,
+    borderRadius: 50,
+    backgroundColor: '#4CAF50',
+    marginBottom: 15,
+  },
+  profileImage: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 3,
+    borderColor: '#000',
+  },
+  profileName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  profileEmail: {
+    fontSize: 14,
+    color: '#999',
+  },
+  statsSection: {
+    padding: 20,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#1A1A1A',
+    borderRadius: 25,
+    padding: 4,
+    marginBottom: 20,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+  },
+  activeTab: {
+    backgroundColor: '#4CAF50',
+  },
+  tabText: {
+    color: '#999',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  activeTabText: {
+    color: '#fff',
+  },
+  statsCard: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  statsValue: {
+    color: '#fff',
+    fontSize: 42,
+    fontWeight: 'bold',
+  },
+  statsLabel: {
+    color: '#999',
+    fontSize: 16,
+    fontWeight: '500',
+    marginTop: 8,
+  },
+  statsSubtext: {
+    color: '#666',
+    fontSize: 14,
+    marginTop: 4,
+  },
+  achievementsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  achievementCard: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 15,
+    padding: 20,
+    width: '48%',
+    alignItems: 'center',
+  },
+  achievementValue: {
+    color: '#fff',
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginVertical: 8,
+  },
+  achievementLabel: {
+    color: '#999',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  buttonGroup: {
+    padding: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+  },
+  signOutButton: {
+    backgroundColor: '#FF4B4B',
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  deleteAccountButton: {
+    backgroundColor: '#333',
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   contentContainer: {
     flex: 1,
@@ -452,10 +697,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  buttonText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: 'white',
+  googleButton: {
+    backgroundColor: '#4285F4',
+    marginBottom: 12,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonIcon: {
+    marginRight: 10,
   },
   formContainer: {
     width: '90%',
@@ -496,58 +748,6 @@ const styles = StyleSheet.create({
   toggleText: {
     fontSize: 14,
   },
-  profileCircle: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    marginBottom: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emailText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  memberText: {
-    fontSize: 14,
-    marginBottom: 30,
-    opacity: 0.8,
-  },
-  statsContainer: {
-    width: '90%',
-    padding: 20,
-    borderRadius: 15,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  statItem: {
-    alignItems: 'center',
-    padding: 10,
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  statLabel: {
-    fontSize: 14,
-    opacity: 0.8,
-  },
-  signOutButton: {
-    width: '90%',
-    height: 50,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 30,
-  },
   footerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -560,17 +760,5 @@ const styles = StyleSheet.create({
   footerLink: {
     fontSize: 14,
     fontWeight: '600',
-  },
-  googleButton: {
-    backgroundColor: '#4285F4',
-    marginBottom: 12,
-  },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonIcon: {
-    marginRight: 10,
   },
 }); 
