@@ -28,27 +28,29 @@ export default function HomeScreen() {
         <ThemedView style={styles.rulesCard}>
           <ThemedText style={styles.retroRulesTitle}>HOW TO PLAY</ThemedText>
           
-          <View style={styles.ruleItem}>
-            <View style={[styles.ruleBullet, { backgroundColor: colors.primary }]}>
-              <ThemedText style={styles.bulletText}>1</ThemedText>
+          <View style={styles.rulesContainer}>
+            <View style={styles.ruleItem}>
+              <View style={[styles.ruleBullet, { backgroundColor: colors.primary }]}>
+                <ThemedText style={styles.bulletText}>1</ThemedText>
+              </View>
+              <ThemedText style={styles.retroRuleText}>3 Attempts to practice</ThemedText>
             </View>
-            <ThemedText style={styles.retroRuleText}>3 Attempts to practice</ThemedText>
-          </View>
-          
-          <View style={styles.ruleItem}>
-            <View style={[styles.ruleBullet, { backgroundColor: colors.secondary }]}>
-              <ThemedText style={styles.bulletText}>2</ThemedText>
+            
+            <View style={styles.ruleItem}>
+              <View style={[styles.ruleBullet, { backgroundColor: colors.secondary }]}>
+                <ThemedText style={styles.bulletText}>2</ThemedText>
+              </View>
+              <ThemedText style={styles.retroRuleText}>3 Attempts to set your high score</ThemedText>
             </View>
-            <ThemedText style={styles.retroRuleText}>3 Attempts to set your high score</ThemedText>
-          </View>
-          
-          <View style={styles.ruleItem}>
-            <View style={[styles.ruleBullet, { backgroundColor: colors.accent }]}>
-              <ThemedText style={styles.bulletText}>3</ThemedText>
+            
+            <View style={styles.ruleItem}>
+              <View style={[styles.ruleBullet, { backgroundColor: colors.accent }]}>
+                <ThemedText style={styles.bulletText}>3</ThemedText>
+              </View>
+              <ThemedText style={styles.retroRuleText}>New game every 24 hours</ThemedText>
             </View>
-            <ThemedText style={styles.retroRuleText}>New game every 24 hours</ThemedText>
           </View>
-      </ThemedView>
+        </ThemedView>
 
         {/* Call to Action */}
         <View style={styles.ctaContainer}>
@@ -74,7 +76,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 30,
     width: '100%',
-    // Added top margin to position the logo where the title used to be
     marginTop: 25,
   },
   retroTitleContainer: {
@@ -88,21 +89,15 @@ const styles = StyleSheet.create({
     fontSize: 42,
     fontWeight: 'bold',
     letterSpacing: 2,
-    // Create pixelated effect with multiple shadows
     textShadowColor: 'rgba(0, 0, 0, 0.7)',
     textShadowOffset: { width: 4, height: 4 },
     textShadowRadius: 1,
-    // Ensure text is not cut off
     paddingHorizontal: 5,
     paddingVertical: 8,
-    // Pixelated font style
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    // Add a border to create a more blocky appearance
     borderWidth: 0,
     borderColor: 'transparent',
-    // Ensure the text has enough room
     marginVertical: 10,
-    // Ensure the text is not cut off at the top
     includeFontPadding: true,
     textTransform: 'uppercase',
     lineHeight: 50,
@@ -133,7 +128,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 5,
-    // Add pixelated border
     borderWidth: 4,
     borderColor: Colors.dark.primary,
   },
@@ -148,19 +142,24 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 0,
   },
+  rulesContainer: {
+    alignItems: 'center',
+    width: '100%',
+  },
   ruleItem: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 15,
+    width: '80%',
+    justifyContent: 'center',
   },
   ruleBullet: {
     width: 30,
     height: 30,
-    borderRadius: 8, // More pixelated look with less rounded corners
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
-    // Add pixelated border
     borderWidth: 2,
     borderColor: 'rgba(0, 0, 0, 0.3)',
   },
@@ -174,13 +173,13 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     letterSpacing: 1,
+    textAlign: 'left',
   },
   ctaContainer: {
     marginTop: 20,
     padding: 15,
-    borderRadius: 8, // More pixelated look with less rounded corners
+    borderRadius: 8,
     backgroundColor: Colors.dark.highlight,
-    // Add pixelated border
     borderWidth: 3,
     borderColor: 'rgba(0, 0, 0, 0.3)',
     width: '100%',

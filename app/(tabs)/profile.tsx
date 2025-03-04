@@ -9,6 +9,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { ResponseType } from 'expo-auth-session';
 import {collection, doc, getDoc, setDoc} from "firebase/firestore";
+import DeleteAccountButton from '../components/DeleteAccountButton';
 
 // Initialize WebBrowser for OAuth
 WebBrowser.maybeCompleteAuthSession();
@@ -70,33 +71,6 @@ const getActivityStats = (stats: UserStats | null, tab: string): number => {
     default:
       return 0;
   }
-};
-
-const handleDeleteAccount = async () => {
-  Alert.alert(
-    "Delete Account",
-    "Are you sure you want to delete your account? This action cannot be undone.",
-    [
-      {
-        text: "Cancel",
-        style: "cancel"
-      },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            if (user) {
-              await user.delete();
-              Alert.alert("Success", "Your account has been deleted.");
-            }
-          } catch (error: any) {
-            Alert.alert("Error", error.message);
-          }
-        }
-      }
-    ]
-  );
 };
 
 export default function ProfileScreen() {
@@ -379,12 +353,9 @@ export default function ProfileScreen() {
           >
             <Text style={styles.buttonText}>Sign Out</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.deleteAccountButton}
-            onPress={handleDeleteAccount}
-          >
-            <Text style={styles.buttonText}>Delete Account</Text>
-          </TouchableOpacity>
+          <View style={styles.deleteAccountButton}>
+            <DeleteAccountButton />
+          </View>
         </View>
       </View>
     );
