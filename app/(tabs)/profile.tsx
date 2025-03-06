@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Image, ScrollView } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
+import { onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithCredential, updateProfile } from 'firebase/auth';
 import { auth, db } from '@/firebase/config';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
@@ -10,9 +10,19 @@ import * as Google from 'expo-auth-session/providers/google';
 import { ResponseType } from 'expo-auth-session';
 import {collection, doc, getDoc, setDoc} from "firebase/firestore";
 import DeleteAccountButton from '../components/DeleteAccountButton';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
+import { Tabs } from 'expo-router';
 
 // Initialize WebBrowser for OAuth
 WebBrowser.maybeCompleteAuthSession();
+
+// Update the param list to use tab navigation
+type TabParamList = {
+  play: undefined;
+  profile: undefined;
+  // add other tabs as needed
+};
 
 async function upsertUser(user: User) {
   try {
@@ -85,6 +95,8 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('Day');
   const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [username, setUsername] = useState('');
+  const router = useRouter();
 
   // Set up Google Auth Request
   const [request, response, promptAsync] = Google
@@ -113,15 +125,39 @@ export default function ProfileScreen() {
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
-        Alert.alert('Success', 'Logged in successfully!');
+        await handleSuccessfulAuth();
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
-        Alert.alert('Success', 'Account created successfully!');
+        // Validate username when creating account
+        if (!username.trim()) {
+          Alert.alert('Error', 'Please enter a username');
+          return;
+        }
+        
+        // Create account
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        
+        // Set display name immediately using the imported updateProfile
+        await updateProfile(userCredential.user, {
+          displayName: username.trim()
+        });
+        
+        // Force refresh the user to ensure the displayName is available
+        await userCredential.user.reload();
+        
+        // Add a delay to ensure Firebase has processed the update
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        console.log('Display name set to:', username.trim());
+        console.log('Current user display name:', auth.currentUser?.displayName);
+        
+        await handleSuccessfulAuth();
       }
       setEmail('');
       setPassword('');
+      setUsername('');
       setShowAuthForm(false);
     } catch (error: any) {
+      console.error('Error in handleAuth:', error);
       Alert.alert('Error', error.message);
     }
   };
@@ -160,6 +196,34 @@ export default function ProfileScreen() {
       } finally {
         setLoading(false);
       }
+    }
+  };
+
+  const handleSuccessfulAuth = async () => {
+    try {
+      const pendingScore = await AsyncStorage.getItem('pendingScore');
+      if (pendingScore) {
+        await AsyncStorage.removeItem('pendingScore');
+        Alert.alert(
+          'Welcome!',
+          'Your account has been created. You can now submit your score!',
+          [{
+            text: 'OK',
+            onPress: () => {
+              router.replace({
+                pathname: '/(tabs)/game',
+                params: { 
+                  directSubmit: '1',
+                  pendingScore: pendingScore,
+                  fromAuth: '1'  // Add this to indicate we're coming from authentication
+                }
+              });
+            }
+          }]
+        );
+      }
+    } catch (error) {
+      console.error('Error checking pending score:', error);
     }
   };
 
@@ -217,6 +281,23 @@ export default function ProfileScreen() {
                 secureTextEntry
               />
             </View>
+            
+            {!isLogin && (
+              <View style={[styles.inputContainer, { backgroundColor: colors.card }]}>
+                <Ionicons name="person" size={24} color={colors.primary} style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, { 
+                    color: colors.text,
+                    borderColor: colors.border
+                  }]}
+                  placeholder="Username"
+                  placeholderTextColor={colors.text + '80'}
+                  value={username}
+                  onChangeText={setUsername}
+                  autoCapitalize="none"
+                />
+              </View>
+            )}
             
             <TouchableOpacity 
               style={[styles.authButton, { 

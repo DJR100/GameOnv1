@@ -1,0 +1,1 @@
+export function submitScore(score: number, userId: string): Promise<boolean>; 

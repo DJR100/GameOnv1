@@ -676,14 +676,14 @@ export default function ShootGame() {
         
         <View style={styles.buttonRow}>
           <TouchableOpacity
-            style={[styles.button, { backgroundColor: colors.primary }]}
+            style={[styles.button, { backgroundColor: '#FF4B4B' }]} // Red color
             onPress={startGame}
           >
             <Text style={styles.buttonText}>Play Again</Text>
           </TouchableOpacity>
           
           <TouchableOpacity
-            style={[styles.button, { backgroundColor: colors.secondary }]}
+            style={[styles.button, { backgroundColor: '#FF4B4B' }]} // Red color
             onPress={goToHome}
           >
             <Text style={styles.buttonText}>Home</Text>
@@ -691,7 +691,7 @@ export default function ShootGame() {
         </View>
         
         <TouchableOpacity
-          style={[styles.button, { backgroundColor: colors.primary }]}
+          style={[styles.button, { backgroundColor: '#4CAF50' }]} // Green color
           onPress={() => setShowScoreModal(true)}
         >
           <Text style={styles.buttonText}>SUBMIT SCORE</Text>
@@ -1076,11 +1076,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingBottom: 100, // This will move the modal up
   },
   modalContent: {
     width: '80%',
     padding: 20,
-    borderRadius: 0, // Square for pixelated look
+    borderRadius: 0,
     alignItems: 'center',
     borderWidth: 4,
     borderColor: 'rgba(255,255,255,0.3)',
@@ -1103,15 +1104,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     width: '100%',
     marginTop: 20,
+    marginBottom: 15, // Add space between button row and submit score button
   },
   button: {
     paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 0, // Square for pixelated look
+    borderRadius: 0,
     minWidth: 100,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.5)',
+    marginVertical: 5, // Add spacing between buttons
   },
   buttonText: {
     color: 'white',

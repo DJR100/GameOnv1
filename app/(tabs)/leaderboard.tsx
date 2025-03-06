@@ -8,6 +8,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { getTopScores, ScoreDataWithId } from '@/services/scoreService';
 import { Ionicons } from '@expo/vector-icons';
+import { Timestamp } from 'firebase/firestore';
 
 export default function LeaderboardScreen() {
   const colorScheme = useColorScheme();
@@ -18,6 +19,7 @@ export default function LeaderboardScreen() {
   const [error, setError] = useState<string | null>(null);
   const [showNameInput, setShowNameInput] = useState(false);
   const [playerName, setPlayerName] = useState('');
+  const [username, setUsername] = useState('');
 
   // Fetch leaderboard data when component mounts
   useEffect(() => {
@@ -29,10 +31,20 @@ export default function LeaderboardScreen() {
       setLoading(true);
       setError(null);
       console.log('Fetching scores for game type: shoot');
-      // Fetch top scores for the "shoot" game type
       const scores = await getTopScores('shoot', 20);
-      console.log('Received scores:', scores);
-      setLeaderboard(scores);
+      
+      // Transform the data to handle server timestamp
+      const transformedScores = scores.map(score => ({
+        ...score,
+        timestamp: score.timestamp instanceof Timestamp 
+          ? score.timestamp.toDate() 
+          : new Date(score.timestamp),
+        playerName: score.playerName || 'Anonymous',
+        score: Number(score.score)
+      }));
+      
+      console.log('Received scores:', transformedScores);
+      setLeaderboard(transformedScores);
     } catch (err) {
       console.error('Error fetching leaderboard:', err);
       setError('Failed to load leaderboard data. Please try again.');

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Text } from 'react-native';
+import { Modal, View, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Text, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { submitScore } from '@/services/scoreService';
+import { submitScore } from '@/src/utils/scores';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
+import { useRouter } from 'expo-router';
+import { auth } from '@/firebase/config';
 
 interface ScoreSubmissionModalProps {
   visible: boolean;
@@ -23,6 +25,7 @@ const ScoreSubmissionModal: React.FC<ScoreSubmissionModalProps> = ({
   const [isSuccess, setIsSuccess] = useState(false);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const router = useRouter();
 
   // Load saved player name when modal opens
   useEffect(() => {
@@ -50,29 +53,40 @@ const ScoreSubmissionModal: React.FC<ScoreSubmissionModalProps> = ({
   };
 
   const handleSubmit = async () => {
-    if (!playerName.trim()) {
+    if (!auth.currentUser) {
+      try {
+        // Store the pending score
+        await AsyncStorage.setItem('pendingScore', score.toString());
+        onClose();  // Close the modal
+        
+        Alert.alert(
+          'Login Required',
+          'Please log in or create an account to submit your score.',
+          [
+            {
+              text: 'Go to Login',
+              onPress: () => router.push('/profile')
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel',
+              onPress: () => AsyncStorage.removeItem('pendingScore') // Clean up if user cancels
+            }
+          ]
+        );
+      } catch (error) {
+        console.error('Error storing pending score:', error);
+      }
       return;
     }
 
-    setIsSubmitting(true);
-
     try {
-      // Save player name for future use
-      await AsyncStorage.setItem('playerName', playerName);
-      // Submit score to Firebase
-      await submitScore({
-        playerName: playerName.trim(),
-        score,
-        gameType,
-        timestamp: new Date()
-      });
-
-      setIsSuccess(true);
+      await submitScore(score);
+      Alert.alert('Success', 'Score submitted!');
+      onClose();  // Close modal on success too
     } catch (error) {
-      console.error('Error submitting score:', error);
-      alert('Failed to submit score. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+      console.error('Submit error:', error);
+      Alert.alert('Error', 'Failed to submit score. Please try again.');
     }
   };
 
@@ -126,7 +140,7 @@ const ScoreSubmissionModal: React.FC<ScoreSubmissionModalProps> = ({
               
               <View style={styles.buttonContainer}>
                 <TouchableOpacity
-                  style={[styles.button, { backgroundColor: colors.secondary }]}
+                  style={[styles.button, { backgroundColor: '#FF4B4B' }]}
                   onPress={onClose}
                   disabled={isSubmitting}
                 >
@@ -137,7 +151,7 @@ const ScoreSubmissionModal: React.FC<ScoreSubmissionModalProps> = ({
                   style={[
                     styles.button, 
                     { 
-                      backgroundColor: playerName.trim() ? colors.primary : colors.primary + '80',
+                      backgroundColor: playerName.trim() ? '#4CAF50' : '#4CAF5080',
                       opacity: isSubmitting ? 0.7 : 1
                     }
                   ]}
