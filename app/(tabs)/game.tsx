@@ -23,6 +23,7 @@ import Svg, { Circle } from 'react-native-svg';
 import ScoreSubmissionModal from '../../components/ScoreSubmissionModal';
 import HomeOverlay from '@/components/HomeOverlay';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 const { width, height } = Dimensions.get('window');
 const PLAYER_RADIUS = 50; // Center "hit zone" radius 
@@ -68,7 +69,7 @@ type GameState = 'ready' | 'playing' | 'paused' | 'game_over';
 export default function ShootGame() {
   const router = useRouter();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors['dark'];
   
   // Game state
   const [gameState, setGameState] = useState<GameState>('ready');
@@ -590,7 +591,7 @@ export default function ShootGame() {
   // Return to home screen
   const goToHome = () => {
     clearAllTimers();
-    router.navigate('/');
+    router.navigate('/leaderboard');
   };
 
   // Render crosshair
@@ -720,28 +721,28 @@ export default function ShootGame() {
         <Text style={[styles.modalText, { color: colors.text }]}>Score: {score}</Text>
         <Text style={[styles.modalText, { color: colors.text }]}>High Score: {Math.max(score, highScore)}</Text>
         
-        <View style={styles.buttonRow}>
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: '#FF4B4B' }]} // Red color
-            onPress={startGame}
-          >
-            <Text style={styles.buttonText}>Play Again</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: '#FF4B4B' }]} // Red color
-            onPress={goToHome}
-          >
-            <Text style={styles.buttonText}>Home</Text>
-          </TouchableOpacity>
-        </View>
-        
         <TouchableOpacity
-          style={[styles.button, { backgroundColor: '#4CAF50' }]} // Green color
+          style={[styles.button, { backgroundColor: '#4CAF50', marginBottom: 15 }]}
           onPress={() => setShowScoreModal(true)}
         >
           <Text style={styles.buttonText}>SUBMIT SCORE</Text>
         </TouchableOpacity>
+
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[styles.iconButton, { backgroundColor: '#FF4B4B' }]}
+            onPress={startGame}
+          >
+            <Ionicons name="reload" size={20} color="white" />
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.iconButton, { backgroundColor: '#FF4B4B' }]}
+            onPress={goToHome}
+          >
+            <Ionicons name="trophy" size={20} color="white" />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -823,7 +824,7 @@ export default function ShootGame() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      <StatusBar style="light" />
       
       {/* Game environment */}
       <View style={styles.gameEnvironment} {...panResponder.panHandlers}>
@@ -1152,10 +1153,11 @@ const styles = StyleSheet.create({
   },
   buttonRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     width: '100%',
     marginTop: 20,
-    marginBottom: 15, // Add space between button row and submit score button
+    marginBottom: 15,
+    paddingHorizontal: 0, // Remove padding as we'll control spacing with button width
   },
   button: {
     paddingVertical: 10,
@@ -1165,7 +1167,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.5)',
-    marginVertical: 5, // Add spacing between buttons
+    marginVertical: 5,
+    width: '100%', // Make submit score button full width
+  },
+  iconButton: {
+    padding: 8,
+    borderRadius: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.5)',
+    width: 42, // Slightly larger for better spacing
+    height: 42, // Keep it square
   },
   buttonText: {
     color: 'white',
@@ -1199,4 +1212,4 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'white',
   },
-}); 
+});

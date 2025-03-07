@@ -16,7 +16,7 @@ export default function TabLayout() {
     <Tabs
       initialRouteName="game"
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: Colors['dark'].tint,
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
@@ -24,8 +24,11 @@ export default function TabLayout() {
           ios: {
             // Use a transparent background on iOS to show the blur effect
             position: 'absolute',
+            backgroundColor: Colors.dark.background,
           },
-          default: {},
+          default: {
+            backgroundColor: Colors.dark.background,
+          },
         }),
       }}>
       <Tabs.Screen

@@ -1,5 +1,4 @@
 import { StyleSheet, View, Platform, TouchableOpacity } from 'react-native';
-import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -10,17 +9,11 @@ interface HomeOverlayProps {
 }
 
 export default function HomeOverlay({ onClose }: HomeOverlayProps) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors['dark'];
 
   return (
     <View style={styles.overlayContainer}>
       <ThemedView style={styles.content}>
-        {/* Close Button */}
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <Ionicons name="close" size={24} color={colors.text} />
-        </TouchableOpacity>
-
         {/* Logo */}
         <View style={styles.logoContainer}>
           {/* Retro Game Title */}
@@ -65,6 +58,14 @@ export default function HomeOverlay({ onClose }: HomeOverlayProps) {
             Top 3 players win Prizes Daily
           </ThemedText>
         </View>
+
+        {/* Play Button - Moved outside CTA container */}
+        <TouchableOpacity
+          style={[styles.playButton, { backgroundColor: colors.secondary }]}
+          onPress={onClose}
+        >
+          <ThemedText style={styles.playButtonText}>PLAY</ThemedText>
+        </TouchableOpacity>
       </ThemedView>
     </View>
   );
@@ -84,13 +85,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     alignItems: 'center',
-  },
-  closeButton: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 50 : 20,
-    right: 20,
-    zIndex: 1001,
-    padding: 8,
   },
   logoContainer: {
     alignItems: 'center',
@@ -142,7 +136,7 @@ const styles = StyleSheet.create({
     width: '100%',
     padding: 20,
     borderRadius: 15,
-    marginBottom: 30,
+    marginBottom: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -150,6 +144,7 @@ const styles = StyleSheet.create({
     elevation: 5,
     borderWidth: 4,
     borderColor: Colors.dark.primary,
+    backgroundColor: Colors.dark.card,
   },
   retroRulesTitle: {
     fontSize: 22,
@@ -196,13 +191,15 @@ const styles = StyleSheet.create({
     textAlign: 'left',
   },
   ctaContainer: {
-    marginTop: 20,
+    alignItems: 'center',
+    marginTop: 0,
     padding: 15,
     borderRadius: 8,
     backgroundColor: Colors.dark.highlight,
     borderWidth: 3,
-    borderColor: 'rgba(0, 0, 0, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
     width: '100%',
+    marginBottom: 15,
   },
   retroCtaText: {
     fontSize: 18,
@@ -214,5 +211,20 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(255, 255, 255, 0.5)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 0,
+  },
+  playButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 40,
+    borderRadius: 0,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.5)',
+    marginTop: 10,
+    backgroundColor: Colors.dark.secondary,
+  },
+  playButtonText: {
+    color: Colors.dark.text,
+    fontSize: 18,
+    fontWeight: 'bold',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
 }); 

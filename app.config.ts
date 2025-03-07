@@ -10,7 +10,13 @@ export default {
         entitlements: {
           "com.apple.developer.applesignin": ["Default"], // Correct Apple Sign-In entitlement
         },
+      },
+      extra: {
+        eas: {
+          projectId: "66105bd1-c84f-40e8-a73a-6bc3bd09365d"
+        }
       }
     }
-  };
+    
+};
   
