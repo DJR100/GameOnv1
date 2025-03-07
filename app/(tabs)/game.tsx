@@ -21,6 +21,8 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import Svg, { Circle } from 'react-native-svg';
 import ScoreSubmissionModal from '../../components/ScoreSubmissionModal';
+import HomeOverlay from '@/components/HomeOverlay';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 const PLAYER_RADIUS = 50; // Center "hit zone" radius 
@@ -81,6 +83,7 @@ export default function ShootGame() {
   const [reloading, setReloading] = useState(false);
   const [reloadProgress, setReloadProgress] = useState(0); // Track reload progress (0-100)
   const [showScoreModal, setShowScoreModal] = useState(false);
+  const [showHomeOverlay, setShowHomeOverlay] = useState(true); // Always show initially
   
   // Spawn manager state
   const [difficultyLevel, setDifficultyLevel] = useState(1);
@@ -135,9 +138,19 @@ export default function ShootGame() {
     onPanResponderRelease: () => {}, // No release action
   });
 
-  // Initialize game
+  // Initialize game and clear overlay state
   useEffect(() => {
-    // Clean up all timers when component unmounts
+    const init = async () => {
+      try {
+        // Clear the overlay state for testing
+        await AsyncStorage.removeItem('hasSeenHomeOverlay');
+        console.log('Cleared overlay state');
+      } catch (error) {
+        console.error('Error clearing overlay state:', error);
+      }
+    };
+    
+    init();
     return () => {
       clearAllTimers();
     };
@@ -171,6 +184,39 @@ export default function ShootGame() {
       }
     }
   }, [health]);
+
+  // Check if we should show the home overlay
+  useEffect(() => {
+    const checkOverlay = async () => {
+      try {
+        console.log('Checking overlay state...');
+        const hasSeenOverlay = await AsyncStorage.getItem('hasSeenHomeOverlay');
+        console.log('hasSeenOverlay value:', hasSeenOverlay);
+        if (hasSeenOverlay === 'true') {
+          console.log('Setting overlay to false');
+          setShowHomeOverlay(false);
+        } else {
+          console.log('Setting overlay to true');
+          setShowHomeOverlay(true);
+        }
+      } catch (error) {
+        console.error('Error checking overlay state:', error);
+      }
+    };
+    
+    checkOverlay();
+  }, []);
+
+  const handleCloseHomeOverlay = async () => {
+    console.log('Closing overlay...');
+    try {
+      await AsyncStorage.setItem('hasSeenHomeOverlay', 'true');
+      setShowHomeOverlay(false);
+      console.log('Overlay closed and state saved');
+    } catch (error) {
+      console.error('Error saving overlay state:', error);
+    }
+  };
 
   // Clear all game timers
   const clearAllTimers = () => {
@@ -893,11 +939,16 @@ export default function ShootGame() {
         {gameState === 'game_over' && renderGameOver()}
       </View>
       
-      {/* Score submission modal */}
+      {/* Home Overlay */}
+      {showHomeOverlay && (
+        <HomeOverlay onClose={handleCloseHomeOverlay} />
+      )}
+
+      {/* Score Submission Modal */}
       <ScoreSubmissionModal
         visible={showScoreModal}
-        onClose={() => setShowScoreModal(false)}
         score={score}
+        onClose={() => setShowScoreModal(false)}
         gameType="shoot"
       />
     </SafeAreaView>

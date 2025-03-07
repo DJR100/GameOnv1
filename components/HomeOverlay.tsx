@@ -1,19 +1,26 @@
-import { StyleSheet, Image, View, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { StyleSheet, View, Platform, TouchableOpacity } from 'react-native';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { Ionicons } from '@expo/vector-icons';
 
-export default function HomeScreen() {
+interface HomeOverlayProps {
+  onClose: () => void;
+}
+
+export default function HomeOverlay({ onClose }: HomeOverlayProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+    <View style={styles.overlayContainer}>
       <ThemedView style={styles.content}>
+        {/* Close Button */}
+        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+          <Ionicons name="close" size={24} color={colors.text} />
+        </TouchableOpacity>
+
         {/* Logo */}
         <View style={styles.logoContainer}>
           {/* Retro Game Title */}
@@ -59,24 +66,37 @@ export default function HomeScreen() {
           </ThemedText>
         </View>
       </ThemedView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  overlayContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    zIndex: 1000,
   },
   content: {
     flex: 1,
     padding: 20,
     alignItems: 'center',
   },
+  closeButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 20,
+    right: 20,
+    zIndex: 1001,
+    padding: 8,
+  },
   logoContainer: {
     alignItems: 'center',
     marginBottom: 30,
     width: '100%',
-    marginTop: 25,
+    marginTop: Platform.OS === 'ios' ? 80 : 50,
   },
   retroTitleContainer: {
     flexDirection: 'row',
@@ -195,4 +215,4 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 0,
   },
-});
+}); 
