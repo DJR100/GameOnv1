@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Image, ScrollView } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithCredential, updateProfile } from 'firebase/auth';
+import { onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithCredential, updateProfile, OAuthProvider } from 'firebase/auth';
 import { auth, db } from '@/firebase/config';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
@@ -13,6 +13,7 @@ import DeleteAccountButton from '../components/DeleteAccountButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { Tabs } from 'expo-router';
+import * as AppleAuthentication from 'expo-apple-authentication';
 
 // Initialize WebBrowser for OAuth
 WebBrowser.maybeCompleteAuthSession();
@@ -224,6 +225,35 @@ export default function ProfileScreen() {
       }
     } catch (error) {
       console.error('Error checking pending score:', error);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      if (!credential.identityToken) {
+        throw new Error("No identity token returned");
+      }
+
+      // Create an OAuthProvider credential
+      const provider = new OAuthProvider('apple.com');
+      const oauthCredential = provider.credential({
+        idToken: credential.identityToken,
+      });
+
+      // Sign in with Firebase
+      const userCredential = await signInWithCredential(auth, oauthCredential);
+      console.log('Signed in with Apple:', userCredential.user);
+      await handleSuccessfulAuth(); // Use your existing auth success handler
+
+    } catch (error) {
+      console.error('Apple Sign In Error:', error);
     }
   };
 
@@ -506,24 +536,15 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.authButton, styles.googleButton, {
-              shadowColor: '#4285F4',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 4,
-              elevation: 8,
-            }]}
-            onPress={() => promptAsync({showInRecents: true})}
-            disabled={loading}
-          >
-            <View style={styles.buttonContent}>
-              <Ionicons name="logo-google" size={24} color="white" style={styles.buttonIcon} />
-              <Text style={styles.buttonText}>
-                {loading ? 'Signing in...' : 'Continue with Google'}
-              </Text>
-            </View>
-          </TouchableOpacity>
+          <View style={[styles.appleButtonContainer, { backgroundColor: '#FF4B4B' }]}>
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+              cornerRadius={12}
+              style={[styles.authButton]}
+              onPress={handleAppleSignIn}
+            />
+          </View>
 
           <TouchableOpacity
             style={[styles.authButton, { 
@@ -812,5 +833,14 @@ const styles = StyleSheet.create({
   footerLink: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  appleButtonContainer: {
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#FF4B4B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 8,
   },
 }); 

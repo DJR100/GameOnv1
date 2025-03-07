@@ -31,7 +31,7 @@ export default function LeaderboardScreen() {
       setLoading(true);
       setError(null);
       console.log('Fetching scores for game type: shoot');
-      const scores = await getTopScores('shoot', 20);
+      const scores = await getTopScores('shoot', 50);
       
       // Transform the data to handle server timestamp
       const transformedScores = scores.map(score => ({
