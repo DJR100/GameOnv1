@@ -6,6 +6,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 import { useRouter } from 'expo-router';
 import { auth } from '@/firebase/config';
+import { updateUserGameStats } from '../app/utils/gameStats';
 
 interface ScoreSubmissionModalProps {
   visible: boolean;
@@ -24,7 +25,7 @@ const ScoreSubmissionModal: React.FC<ScoreSubmissionModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
   const router = useRouter();
 
   // Load saved player name when modal opens
@@ -74,19 +75,29 @@ const ScoreSubmissionModal: React.FC<ScoreSubmissionModalProps> = ({
             }
           ]
         );
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error storing pending score:', error);
       }
       return;
     }
 
     try {
+      setIsSubmitting(true);
+      
+      // Submit score to leaderboard
       await submitScore(score);
+      
+      // Update user's game stats
+      await updateUserGameStats(auth.currentUser.uid, score);
+      
+      setIsSuccess(true);
       Alert.alert('Success', 'Score submitted!');
       onClose();  // Close modal on success too
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Submit error:', error);
       Alert.alert('Error', 'Failed to submit score. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

@@ -58,15 +58,33 @@ interface GameStats {
     currentStreak: number;
     longestStreak: number;
     currentPosition: number;
+    highScore: number;
+    lastPlayed: string | null;
   };
 }
 
-interface UserStats {
+interface UserData {
   gameStats: GameStats;
-  lastPlayed: Date;
+  username: string;
+  email: string;
 }
 
-const getActivityStats = (stats: UserStats | null): number => {
+const fetchUserStats = async (userId: string): Promise<UserData | null> => {
+  try {
+    const userRef = doc(db, "users", userId);
+    const userSnap = await getDoc(userRef);
+    
+    if (userSnap.exists()) {
+      return userSnap.data() as UserData;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching user stats:", error);
+    return null;
+  }
+};
+
+const getActivityStats = (stats: UserData | null): number => {
   if (!stats?.gameStats) return 0;
   return stats.gameStats.totalGames || 0;
 };
@@ -81,7 +99,7 @@ export default function ProfileScreen() {
   const [password, setPassword] = useState('');
   const [userInfo, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [username, setUsername] = useState('');
   const router = useRouter();
 
@@ -108,11 +126,23 @@ export default function ProfileScreen() {
     handleSignInResponse();
   }, [response]);
 
+  useEffect(() => {
+    const loadUserStats = async () => {
+      if (user?.uid) {
+        const stats = await fetchUserStats(user.uid);
+        if (stats) {
+          setUserData(stats);
+        }
+      }
+    };
+
+    loadUserStats();
+  }, [user]);
+
   const handleAuth = async () => {
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
-        await handleSuccessfulAuth();
       } else {
         // Validate username when creating account
         if (!username.trim()) {
@@ -126,6 +156,25 @@ export default function ProfileScreen() {
         // Set display name immediately using the imported updateProfile
         await updateProfile(userCredential.user, {
           displayName: username.trim()
+        });
+        
+        // Store user details in Firestore
+        await setDoc(doc(db, "users", userCredential.user.uid), {
+          uid: userCredential.user.uid,
+          email: userCredential.user.email,
+          username: username.trim(),
+          provider: "email/password",
+          createdAt: new Date().toISOString(),
+          gameStats: {
+            totalGames: 0,
+            personalBest: {
+              currentStreak: 0,
+              longestStreak: 1,
+              currentPosition: 0,
+              highScore: 0,
+              lastPlayed: null
+            }
+          }
         });
         
         // Force refresh the user to ensure the displayName is available
@@ -235,8 +284,35 @@ export default function ProfileScreen() {
 
       // Sign in with Firebase
       const userCredential = await signInWithCredential(auth, oauthCredential);
-      console.log('Signed in with Apple:', userCredential.user);
-      await handleSuccessfulAuth(); // Use your existing auth success handler
+      const user = userCredential.user;
+
+      // Check if user exists in Firestore
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        // Store user details in Firestore
+        await setDoc(userRef, {
+          uid: user.uid,
+          email: user.email || "",
+          username: credential.fullName?.givenName || "Apple User",
+          provider: "apple",
+          createdAt: new Date().toISOString(),
+          gameStats: {
+            totalGames: 0,
+            personalBest: {
+              currentStreak: 0,
+              longestStreak: 1,
+              currentPosition: 0,
+              highScore: 0,
+              lastPlayed: null
+            }
+          }
+        });
+      }
+
+      console.log('Signed in with Apple:', user);
+      await handleSuccessfulAuth();
 
     } catch (error) {
       console.error('Apple Sign In Error:', error);
@@ -391,7 +467,7 @@ export default function ProfileScreen() {
             {/* Stats Display */}
             <View style={styles.statsCard}>
               <Text style={styles.statsValue}>
-                {getActivityStats(userStats)}
+                {getActivityStats(userData)}
               </Text>
               <Text style={styles.statsLabel}>Total Games Played</Text>
             </View>
@@ -401,14 +477,14 @@ export default function ProfileScreen() {
               <View style={styles.achievementCard}>
                 <Ionicons name="flame" size={24} color="#FF4B4B" />
                 <Text style={styles.achievementValue}>
-                  {userStats?.gameStats?.personalBest?.currentStreak || 0}
+                  {userData?.gameStats?.personalBest?.longestStreak || 1}
                 </Text>
-                <Text style={styles.achievementLabel}>Current Streak</Text>
+                <Text style={styles.achievementLabel}>Daily Streak</Text>
               </View>
               <View style={styles.achievementCard}>
                 <Ionicons name="trophy" size={24} color="#FFD700" />
                 <Text style={styles.achievementValue}>
-                  {userStats?.gameStats?.personalBest?.currentPosition || '-'}
+                  {userData?.gameStats?.personalBest?.currentPosition || '-'}
                 </Text>
                 <Text style={styles.achievementLabel}>Current Position</Text>
               </View>
@@ -772,5 +848,28 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 8,
+  },
+  statsContainer: {
+    marginTop: 20,
+    padding: 15,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    width: '100%',
+  },
+  statItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  statLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 }); 

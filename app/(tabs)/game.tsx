@@ -24,6 +24,8 @@ import ScoreSubmissionModal from '../../components/ScoreSubmissionModal';
 import HomeOverlay from '@/components/HomeOverlay';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { updateUserGameStats } from '../utils/gameStats';
+import { auth } from '@/firebase/config';
 
 const { width, height } = Dimensions.get('window');
 const PLAYER_RADIUS = 50; // Center "hit zone" radius 
@@ -182,6 +184,13 @@ export default function ShootGame() {
       // Update high score if needed
       if (score > highScore) {
         setHighScore(score);
+      }
+
+      // Update user stats in Firestore
+      const user = auth.currentUser;
+      if (user) {
+        updateUserGameStats(user.uid, score)
+          .catch((error: unknown) => console.error('Error updating game stats:', error));
       }
     }
   }, [health]);
