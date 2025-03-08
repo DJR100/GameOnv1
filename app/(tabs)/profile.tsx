@@ -53,14 +53,12 @@ async function upsertUser(user: User) {
 }
 
 interface GameStats {
-  dailyGames: { [key: string]: number };
+  totalGames: number;
   personalBest: {
     currentStreak: number;
     longestStreak: number;
-    highestScore: number;
+    currentPosition: number;
   };
-  weeklyGames: number;
-  monthlyGames: number;
 }
 
 interface UserStats {
@@ -68,25 +66,14 @@ interface UserStats {
   lastPlayed: Date;
 }
 
-const getActivityStats = (stats: UserStats | null, tab: string): number => {
+const getActivityStats = (stats: UserStats | null): number => {
   if (!stats?.gameStats) return 0;
-  
-  switch (tab) {
-    case 'Day':
-      const today = new Date().toISOString().split('T')[0];
-      return stats.gameStats.dailyGames[today] || 0;
-    case 'Week':
-      return stats.gameStats.weeklyGames || 0;
-    case 'Month':
-      return stats.gameStats.monthlyGames || 0;
-    default:
-      return 0;
-  }
+  return stats.gameStats.totalGames || 0;
 };
 
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors['dark'];
   const [user, setUser] = useState<User | null>(null);
   const [showAuthForm, setShowAuthForm] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
@@ -94,7 +81,6 @@ export default function ProfileScreen() {
   const [password, setPassword] = useState('');
   const [userInfo, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('Day');
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [username, setUsername] = useState('');
   const router = useRouter();
@@ -402,41 +388,15 @@ export default function ProfileScreen() {
 
           {/* Stats Section */}
           <View style={styles.statsSection}>
-            {/* Stats Toggle */}
-            <View style={styles.tabContainer}>
-              {['Day', 'Week', 'Month'].map((tab) => (
-                <TouchableOpacity 
-                  key={tab}
-                  style={[
-                    styles.tab,
-                    activeTab === tab && styles.activeTab
-                  ]}
-                  onPress={() => setActiveTab(tab)}
-                >
-                  <Text style={[
-                    styles.tabText,
-                    activeTab === tab && styles.activeTabText
-                  ]}>
-                    {tab}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
             {/* Stats Display */}
             <View style={styles.statsCard}>
               <Text style={styles.statsValue}>
-                {getActivityStats(userStats, activeTab)}
+                {getActivityStats(userStats)}
               </Text>
-              <Text style={styles.statsLabel}>Games Played</Text>
-              <Text style={styles.statsSubtext}>
-                {activeTab === 'Day' ? 'Today' : 
-                 activeTab === 'Week' ? 'Last 7 Days' : 
-                 'Last 30 Days'}
-              </Text>
+              <Text style={styles.statsLabel}>Total Games Played</Text>
             </View>
 
-            {/* Streak and High Score */}
+            {/* Streak and Position */}
             <View style={styles.achievementsContainer}>
               <View style={styles.achievementCard}>
                 <Ionicons name="flame" size={24} color="#FF4B4B" />
@@ -448,26 +408,24 @@ export default function ProfileScreen() {
               <View style={styles.achievementCard}>
                 <Ionicons name="trophy" size={24} color="#FFD700" />
                 <Text style={styles.achievementValue}>
-                  {userStats?.gameStats?.personalBest?.highestScore || 0}
+                  {userStats?.gameStats?.personalBest?.currentPosition || '-'}
                 </Text>
-                <Text style={styles.achievementLabel}>High Score</Text>
+                <Text style={styles.achievementLabel}>Current Position</Text>
               </View>
             </View>
           </View>
-        </ScrollView>
 
-        {/* Bottom Buttons */}
-        <View style={styles.buttonGroup}>
-          <TouchableOpacity
-            style={styles.signOutButton}
-            onPress={handleSignOut}
-          >
-            <Text style={styles.buttonText}>Sign Out</Text>
-          </TouchableOpacity>
-          <View style={styles.deleteAccountButton}>
+          {/* Bottom Buttons */}
+          <View style={styles.buttonGroup}>
+            <TouchableOpacity
+              style={styles.signOutButton}
+              onPress={handleSignOut}
+            >
+              <Text style={styles.buttonText}>Sign Out</Text>
+            </TouchableOpacity>
             <DeleteAccountButton />
           </View>
-        </View>
+        </ScrollView>
       </View>
     );
   }
@@ -608,31 +566,6 @@ const styles = StyleSheet.create({
   statsSection: {
     padding: 20,
   },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#1A1A1A',
-    borderRadius: 25,
-    padding: 4,
-    marginBottom: 20,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-  },
-  activeTab: {
-    backgroundColor: '#4CAF50',
-  },
-  tabText: {
-    color: '#999',
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  activeTabText: {
-    color: '#fff',
-  },
   statsCard: {
     backgroundColor: '#1A1A1A',
     borderRadius: 15,
@@ -650,11 +583,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     marginTop: 8,
-  },
-  statsSubtext: {
-    color: '#666',
-    fontSize: 14,
-    marginTop: 4,
   },
   achievementsContainer: {
     flexDirection: 'row',
@@ -689,8 +617,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 10,
+    width: '100%',
   },
   deleteAccountButton: {
+    width: '100%',
     backgroundColor: '#333',
     padding: 15,
     borderRadius: 12,

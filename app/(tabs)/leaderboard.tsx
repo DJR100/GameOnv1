@@ -12,7 +12,7 @@ import { Timestamp } from 'firebase/firestore';
 
 export default function LeaderboardScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors['dark']; // Force dark theme
   
   const [leaderboard, setLeaderboard] = useState<ScoreDataWithId[]>([]);
   const [loading, setLoading] = useState(true);

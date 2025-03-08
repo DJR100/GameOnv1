@@ -1,4 +1,4 @@
-import { Alert, Button, TextInput, View, Platform } from "react-native";
+import { Alert, TextInput, View, Platform, TouchableOpacity, Text, StyleSheet } from "react-native";
 import {
   getAuth,
   deleteUser,
@@ -215,7 +215,7 @@ const DeleteAccountButton = () => {
   };
 
   return (
-    <View>
+    <View style={styles.container}>
       {showPasswordInput && (
         <TextInput
           secureTextEntry
@@ -231,13 +231,32 @@ const DeleteAccountButton = () => {
           }}
         />
       )}
-      <Button 
-        title="Delete Account" 
-        onPress={handleDeleteAccount} 
-        color="#FF4B4B"
-      />
+      <TouchableOpacity 
+        style={styles.deleteButton}
+        onPress={handleDeleteAccount}
+      >
+        <Text style={styles.buttonText}>Delete Account</Text>
+      </TouchableOpacity>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    width: '100%',
+  },
+  deleteButton: {
+    width: '100%',
+    backgroundColor: '#333',
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#FF4B4B',
+    fontSize: 16,
+    fontWeight: '400',
+  },
+});
 
 export default DeleteAccountButton; 

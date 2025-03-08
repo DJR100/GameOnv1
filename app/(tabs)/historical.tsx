@@ -22,10 +22,14 @@ import { Ionicons } from '@expo/vector-icons';
 interface HistoricalGame {
   id: string;
   title: string;
-  description: string;
   date: string;
-  imageUrl: string | null;
+  coverImage: {
+    url: string | null;
+    setBy: string | null;  // Username of the player who set the image
+    setAt: string | null;  // Timestamp when the image was set
+  };
   route: string;
+  firstPlacePlayer: string;
 }
 
 // This would normally come from an API or database
@@ -33,17 +37,21 @@ const mockHistoricalGames: HistoricalGame[] = [
   {
     id: '1',
     title: 'Classic Pong',
-    description: 'The original arcade classic! Break blocks and set high scores in this timeless game.',
-    date: '1972',
-    imageUrl: null,
+    date: '12/20/2023',
+    coverImage: {
+      url: null,
+      setBy: null,
+      setAt: null
+    },
     route: '/historical/pong',
+    firstPlacePlayer: 'JohnDoe',
   },
 ];
 
 export default function HistoricalGamesScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors['dark']; // Force dark theme
 
   const navigateToGame = (game: HistoricalGame) => {
     router.push(game.route as any);
@@ -55,11 +63,16 @@ export default function HistoricalGamesScreen() {
       onPress={() => navigateToGame(item)}
     >
       <View style={[styles.gameImageContainer, { backgroundColor: colors.primary + '15' }]}>
-        {item.imageUrl ? (
-          <Image source={{ uri: item.imageUrl }} style={styles.gameImage} />
+        {item.coverImage.url ? (
+          <Image source={{ uri: item.coverImage.url }} style={styles.gameImage} />
         ) : (
           <View style={styles.placeholderImage}>
             <Ionicons name="game-controller" size={48} color={colors.primary} />
+            {item.firstPlacePlayer && (
+              <Text style={[styles.placeholderText, { color: colors.primary }]} numberOfLines={2}>
+                Waiting for cover image from winner
+              </Text>
+            )}
           </View>
         )}
       </View>
@@ -67,7 +80,7 @@ export default function HistoricalGamesScreen() {
         <Text style={[styles.gameTitle, { color: colors.text }]}>{item.title}</Text>
         <Text style={[styles.gameDate, { color: colors.text + 'CC' }]}>{item.date}</Text>
         <Text style={[styles.gameDescription, { color: colors.text }]} numberOfLines={2}>
-          {item.description}
+          1st Place - {item.firstPlacePlayer}
         </Text>
       </View>
     </TouchableOpacity>
@@ -238,6 +251,8 @@ const styles = StyleSheet.create({
     height: 100,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+    position: 'relative',
   },
   gameImage: {
     width: '100%',
@@ -249,6 +264,7 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 8,
   },
   gameInfo: {
     flex: 1,
@@ -295,5 +311,25 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  imageOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: 4,
+  },
+  imageCredit: {
+    color: '#fff',
+    fontSize: 12,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  placeholderText: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 8,
+    paddingHorizontal: 4,
   },
 }); 
