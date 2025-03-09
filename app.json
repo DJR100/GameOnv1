@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "GameOn-v1",
+    "name": "GameOn",
     "slug": "gameon-v1",
     "version": "1.0.2",
     "orientation": "portrait",
@@ -16,6 +16,7 @@
       "entitlements": {
         "aps-environment": "production"
       },
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "UIUserInterfaceStyle": "Dark",
         "ITSAppUsesNonExemptEncryption": false,
@@ -40,8 +41,9 @@
       "favicon": "./assets/images/icon.png"
     },
     "plugins": [
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging",
       "expo-router",
-      "@react-native-google-signin/google-signin",
       [
         "expo-splash-screen",
         {
@@ -49,6 +51,14 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
         }
       ]
     ],
