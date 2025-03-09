@@ -134,11 +134,13 @@ export default function ProfileScreen() {
         const enabled = authStatus === messaging.AuthorizationStatus.AUTHORIZED || authStatus === messaging.AuthorizationStatus.PROVISIONAL;
         if (enabled) {
           console.log('Authorization status:', authStatus);
+          await messaging().registerDeviceForRemoteMessages()
         }
       } else {
         PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
         );
+        await messaging().registerDeviceForRemoteMessages()
       }
     })();
   })
