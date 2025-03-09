@@ -2,9 +2,9 @@
   "expo": {
     "name": "GameOn-v1",
     "slug": "GameOn-v1",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
-    "icon": "./assets/images/GameOn_v2.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
@@ -13,9 +13,13 @@
       "bundleIdentifier": "com.djr.GameOn",
       "buildNumber": "2",
       "userInterfaceStyle": "dark",
+      "entitlements": {
+        "aps-environment": "production"
+      },
       "infoPlist": {
         "UIUserInterfaceStyle": "Dark",
         "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": ["remote-notification"],
         "config": {
           "googleSignIn": {
             "reservedClientId": "com.googleusercontent.apps.397096414574-c6vo7gut9mm58pi818bleht0vakn36l"
@@ -25,7 +29,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.djr.GameOn"
@@ -33,7 +37,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/icon.png"
     },
     "plugins": [
       "expo-router",
@@ -41,7 +45,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/GameOn_v2.png",
+          "image": "./assets/images/icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
