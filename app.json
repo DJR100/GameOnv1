@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "GameOn-v1",
-    "slug": "GameOn-v1",
+    "slug": "gameon-v1",
     "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
