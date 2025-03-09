@@ -7,16 +7,7 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 import { PermissionsAndroid, Platform } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
-import * as Notifications from 'expo-notifications';
 import { useColorScheme } from '@/hooks/useColorScheme';
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
-});
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
