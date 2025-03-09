@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Image, ScrollView } from 'react-native';
+import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Image, ScrollView, PermissionsAndroid } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithCredential, updateProfile, OAuthProvider } from 'firebase/auth';
@@ -8,11 +8,12 @@ import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { ResponseType } from 'expo-auth-session';
-import {collection, doc, getDoc, setDoc} from "firebase/firestore";
+import { collection, doc, getDoc, setDoc } from "firebase/firestore";
 import DeleteAccountButton from '../components/DeleteAccountButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { Tabs } from 'expo-router';
+import messaging from '@react-native-firebase/messaging';
 import * as AppleAuthentication from 'expo-apple-authentication';
 
 // Initialize WebBrowser for OAuth
@@ -73,7 +74,7 @@ const fetchUserStats = async (userId: string): Promise<UserData | null> => {
   try {
     const userRef = doc(db, "users", userId);
     const userSnap = await getDoc(userRef);
-    
+
     if (userSnap.exists()) {
       return userSnap.data() as UserData;
     }
@@ -105,11 +106,11 @@ export default function ProfileScreen() {
 
   // Set up Google Auth Request
   const [request, response, promptAsync] = Google
-      .useAuthRequest({
-        iosClientId: "397096414574-c6vo7gut9mm58pi818bleht0ovakn36l.apps.googleusercontent.com", // Leave this for now
-        webClientId: "397096414574-gfgea3ilt36i1c1dhn6b2h008omg50jg.apps.googleusercontent.com", // Update this line with your client ID
-        responseType: ResponseType.IdToken,
-      });
+    .useAuthRequest({
+      iosClientId: "397096414574-c6vo7gut9mm58pi818bleht0ovakn36l.apps.googleusercontent.com", // Leave this for now
+      webClientId: "397096414574-gfgea3ilt36i1c1dhn6b2h008omg50jg.apps.googleusercontent.com", // Update this line with your client ID
+      responseType: ResponseType.IdToken,
+    });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -125,6 +126,22 @@ export default function ProfileScreen() {
   useEffect(() => {
     handleSignInResponse();
   }, [response]);
+
+  useEffect(() => {
+    (async () => {
+      if (Platform.OS === 'ios') {
+        const authStatus = await messaging().requestPermission();
+        const enabled = authStatus === messaging.AuthorizationStatus.AUTHORIZED || authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+        if (enabled) {
+          console.log('Authorization status:', authStatus);
+        }
+      } else {
+        PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+        );
+      }
+    })();
+  })
 
   useEffect(() => {
     const loadUserStats = async () => {
@@ -149,15 +166,15 @@ export default function ProfileScreen() {
           Alert.alert('Error', 'Please enter a username');
           return;
         }
-        
+
         // Create account
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        
+
         // Set display name immediately using the imported updateProfile
         await updateProfile(userCredential.user, {
           displayName: username.trim()
         });
-        
+
         // Store user details in Firestore
         await setDoc(doc(db, "users", userCredential.user.uid), {
           uid: userCredential.user.uid,
@@ -176,16 +193,16 @@ export default function ProfileScreen() {
             }
           }
         });
-        
+
         // Force refresh the user to ensure the displayName is available
         await userCredential.user.reload();
-        
+
         // Add a delay to ensure Firebase has processed the update
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
+
         console.log('Display name set to:', username.trim());
         console.log('Current user display name:', auth.currentUser?.displayName);
-        
+
         await handleSuccessfulAuth();
       }
       setEmail('');
@@ -211,13 +228,13 @@ export default function ProfileScreen() {
     if (response?.type === 'success') {
       setLoading(true);
       const { id_token } = response.params;
-      
+
       try {
         // Create Firebase credential with Google ID token
         const credential = GoogleAuthProvider
-            .credential(
-                id_token
-            );
+          .credential(
+            id_token
+          );
         // Sign in with credential
         const userCredential = await signInWithCredential(auth, credential);
         setUserInfo(userCredential.user as any); // Type assertion to fix type error
@@ -248,7 +265,7 @@ export default function ProfileScreen() {
             onPress: () => {
               router.replace({
                 pathname: '/(tabs)/game',
-                params: { 
+                params: {
                   directSubmit: '1',
                   pendingScore: pendingScore,
                   fromAuth: '1'  // Add this to indicate we're coming from authentication
@@ -322,7 +339,7 @@ export default function ProfileScreen() {
   // Show auth form when showAuthForm is true
   if (showAuthForm) {
     return (
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={[styles.container, { backgroundColor: colors.background }]}
       >
@@ -338,15 +355,15 @@ export default function ProfileScreen() {
               {isLogin ? 'Welcome Back!' : 'Join the Game'}
             </Text>
             <Text style={[styles.authSubtitle, { color: colors.text + 'CC' }]}>
-              {isLogin 
-                ? 'Ready to continue your winning streak?' 
+              {isLogin
+                ? 'Ready to continue your winning streak?'
                 : 'Get ready for an epic gaming experience!'}
             </Text>
-            
+
             <View style={[styles.inputContainer, { backgroundColor: colors.card }]}>
               <Ionicons name="mail" size={24} color={colors.primary} style={styles.inputIcon} />
               <TextInput
-                style={[styles.input, { 
+                style={[styles.input, {
                   color: colors.text,
                   borderColor: colors.border
                 }]}
@@ -358,11 +375,11 @@ export default function ProfileScreen() {
                 keyboardType="email-address"
               />
             </View>
-            
+
             <View style={[styles.inputContainer, { backgroundColor: colors.card }]}>
               <Ionicons name="lock-closed" size={24} color={colors.primary} style={styles.inputIcon} />
               <TextInput
-                style={[styles.input, { 
+                style={[styles.input, {
                   color: colors.text,
                   borderColor: colors.border
                 }]}
@@ -373,12 +390,12 @@ export default function ProfileScreen() {
                 secureTextEntry
               />
             </View>
-            
+
             {!isLogin && (
               <View style={[styles.inputContainer, { backgroundColor: colors.card }]}>
                 <Ionicons name="person" size={24} color={colors.primary} style={styles.inputIcon} />
                 <TextInput
-                  style={[styles.input, { 
+                  style={[styles.input, {
                     color: colors.text,
                     borderColor: colors.border
                   }]}
@@ -390,9 +407,9 @@ export default function ProfileScreen() {
                 />
               </View>
             )}
-            
-            <TouchableOpacity 
-              style={[styles.authButton, { 
+
+            <TouchableOpacity
+              style={[styles.authButton, {
                 backgroundColor: colors.primary,
                 shadowColor: colors.primary,
                 shadowOffset: { width: 0, height: 4 },
@@ -406,8 +423,8 @@ export default function ProfileScreen() {
                 {isLogin ? 'Log In' : 'Create Account'}
               </Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               onPress={() => setShowAuthForm(false)}
               style={styles.toggleButton}
             >
@@ -453,9 +470,9 @@ export default function ProfileScreen() {
           {/* Centered Profile Header */}
           <View style={styles.profileHeader}>
             <View style={styles.profileImageContainer}>
-              <Image 
-                source={{ uri: user.photoURL || 'https://example.com/default-profile.jpg' }} 
-                style={styles.profileImage} 
+              <Image
+                source={{ uri: user.photoURL || 'https://example.com/default-profile.jpg' }}
+                style={styles.profileImage}
               />
             </View>
             <Text style={styles.profileName}>{user.displayName || 'Player'}</Text>
@@ -515,14 +532,14 @@ export default function ProfileScreen() {
             Game<Text style={{ color: colors.primary }}>On</Text>
           </Text>
         </View>
-        
+
         <View style={styles.promoSection}>
           <Text style={[styles.welcomeText, { color: colors.text }]}>
             New Here?
           </Text>
           <Text style={[styles.promoTitle, { color: colors.text }]}>
             Create an Account to:
-      </Text>
+          </Text>
 
           <View style={[styles.promoCard, { backgroundColor: colors.primary + '15' }]}>
             <View style={styles.promoItem}>
@@ -581,7 +598,7 @@ export default function ProfileScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.authButton, { 
+            style={[styles.authButton, {
               backgroundColor: colors.primary,
               marginTop: 12,
               shadowColor: colors.primary,
