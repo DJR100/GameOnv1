@@ -9,7 +9,6 @@ import {
   Animated,
   Vibration,
   SafeAreaView,
-  Image,
   Platform,
   Easing,
 } from 'react-native';
@@ -20,7 +19,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import Svg, { Circle } from 'react-native-svg';
-import ScoreSubmissionModal from '../../components/ScoreSubmissionModal';
+import ScoreSubmissionModal from '@/components/ScoreSubmissionModal';
 import HomeOverlay from '@/components/HomeOverlay';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -28,22 +27,20 @@ import { updateUserGameStats } from '../utils/gameStats';
 import { auth } from '@/firebase/config';
 
 const { width, height } = Dimensions.get('window');
-const PLAYER_RADIUS = 50; // Center "hit zone" radius 
-const SPAWN_RADIUS = Math.min(width, height) * 0.4; // Enemies spawn outside this radius
+const PLAYER_RADIUS = 50;
+const SPAWN_RADIUS = Math.min(width, height) * 0.4;
 const ENEMY_SIZE = 30;
 const BULLET_SPEED = 15;
 const BULLET_SIZE = 5;
 
-// Spawn manager constants
-const INITIAL_SPAWN_INTERVAL = 1000; // Initial time between spawns (ms)
-const MIN_SPAWN_INTERVAL = 300; // Minimum spawn interval (ms)
-const SPAWN_INTERVAL_DECREASE_RATE = 100; // How much to decrease spawn interval every level (ms)
-const DIFFICULTY_INCREASE_INTERVAL = 15000; // Time between difficulty increases (ms)
-const MAX_ENEMIES_INITIAL = 15; // Initial max enemies on screen
-const MAX_ENEMIES_INCREASE_RATE = 5; // How many more enemies to allow each level
-const RELOAD_TIME = 1000; // Reload time in milliseconds (changed from 2000 to 1000)
+const INITIAL_SPAWN_INTERVAL = 1000;
+const MIN_SPAWN_INTERVAL = 300;
+const SPAWN_INTERVAL_DECREASE_RATE = 100;
+const DIFFICULTY_INCREASE_INTERVAL = 15000;
+const MAX_ENEMIES_INITIAL = 15;
+const MAX_ENEMIES_INCREASE_RATE = 5;
+const RELOAD_TIME = 1000;
 
-// Define types for our game objects
 interface Enemy {
   id: number;
   x: number;
@@ -53,40 +50,39 @@ interface Enemy {
   hits: number;
   speed: number;
   scale: Animated.Value;
-  isNew: boolean; // Track if enemy is newly spawned
+  isNew: boolean;
 }
 
 interface Bullet {
   id: number;
   x: number;
   y: number;
-  dx: number; // Direction vector X
-  dy: number; // Direction vector Y
+  dx: number;
+  dy: number;
   distance: number;
 }
 
-// Define game states
 type GameState = 'ready' | 'playing' | 'paused' | 'game_over';
 
-export default function ShootGame() {
+export default function GameScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors['dark'];
   
   // Game state
   const [gameState, setGameState] = useState<GameState>('ready');
-  const [rotation, setRotation] = useState(0); // Player's facing angle (degrees)
-  const [targetPosition, setTargetPosition] = useState({ x: 0, y: 0 }); // Target position for shooting
-  const [enemies, setEnemies] = useState<Enemy[]>([]); // Array of enemy objects
-  const [bullets, setBullets] = useState<Bullet[]>([]); // Array of bullets
+  const [rotation, setRotation] = useState(0);
+  const [targetPosition, setTargetPosition] = useState({ x: 0, y: 0 });
+  const [enemies, setEnemies] = useState<Enemy[]>([]);
+  const [bullets, setBullets] = useState<Bullet[]>([]);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [health, setHealth] = useState(100);
   const [ammo, setAmmo] = useState(30);
   const [reloading, setReloading] = useState(false);
-  const [reloadProgress, setReloadProgress] = useState(0); // Track reload progress (0-100)
+  const [reloadProgress, setReloadProgress] = useState(0);
   const [showScoreModal, setShowScoreModal] = useState(false);
-  const [showHomeOverlay, setShowHomeOverlay] = useState(true); // Always show initially
+  const [showHomeOverlay, setShowHomeOverlay] = useState(true);
   
   // Spawn manager state
   const [difficultyLevel, setDifficultyLevel] = useState(1);
@@ -106,46 +102,128 @@ export default function ShootGame() {
   const ammoRegenTimerRef = useRef<NodeJS.Timeout | null>(null);
   const reloadIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const difficultyTimerRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // PanResponder for aiming and shooting
+
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => gameState === 'playing',
-    onMoveShouldSetPanResponder: () => false, // Disable swipe detection
+    onMoveShouldSetPanResponder: () => false,
     onPanResponderGrant: (evt) => {
       if (gameState === 'playing') {
-        // Get absolute tap position on the screen
         const tapX = evt.nativeEvent.pageX;
         const tapY = evt.nativeEvent.pageY;
-        
-        // Calculate center of the screen (origin point for bullets)
         const centerX = width / 2;
         const centerY = height / 2;
-        
-        // Calculate vector from center to tap point
         const targetX = tapX - centerX;
         const targetY = tapY - centerY;
-        
-        // Calculate angle for visual rotation
         const angleRad = Math.atan2(targetY, targetX);
         const angleDeg = (angleRad * 180 / Math.PI + 360) % 360;
-        
-        // Update rotation for visual feedback only
         setRotation(angleDeg);
         setTargetPosition({ x: targetX, y: targetY });
-        
-        // Shoot in the exact direction of the tap
         shootBullet(targetX, targetY);
       }
     },
-    onPanResponderMove: () => {}, // No movement tracking
-    onPanResponderRelease: () => {}, // No release action
+    onPanResponderMove: () => {},
+    onPanResponderRelease: () => {},
   });
+
+  const handleCloseHomeOverlay = async () => {
+    console.log('Closing overlay...');
+    try {
+      await AsyncStorage.setItem('hasSeenHomeOverlay', 'true');
+      setShowHomeOverlay(false);
+      console.log('Overlay closed and state saved');
+    } catch (error) {
+      console.error('Error saving overlay state:', error);
+    }
+  };
+
+  const shootBullet = (dirX: number, dirY: number) => {
+    if (gameState !== 'playing' || reloading) return;
+    
+    if (ammo <= 0) {
+      startReload();
+      return;
+    }
+    
+    setAmmo(prev => prev - 1);
+    
+    const distance = Math.sqrt(dirX * dirX + dirY * dirY);
+    
+    if (distance < 0.001) {
+      setBullets(prev => [
+        ...prev,
+        {
+          id: Date.now(),
+          x: 0,
+          y: 0,
+          dx: 1,
+          dy: 0,
+          distance: 0,
+        },
+      ]);
+    } else {
+      const normalizedDx = dirX / distance;
+      const normalizedDy = dirY / distance;
+      
+      setBullets(prev => [
+        ...prev,
+        {
+          id: Date.now(),
+          x: 0,
+          y: 0,
+          dx: normalizedDx,
+          dy: normalizedDy,
+          distance: 0,
+        },
+      ]);
+    }
+    
+    Vibration.vibrate(50);
+  };
+
+  const startReload = () => {
+    setReloading(true);
+    setReloadProgress(0);
+    
+    if (reloadAnimation.current) {
+      reloadAnimation.current.stop();
+    }
+    
+    reloadAnimValue.setValue(0);
+    
+    reloadAnimation.current = Animated.timing(reloadAnimValue, {
+      toValue: 100,
+      duration: RELOAD_TIME,
+      useNativeDriver: false,
+      easing: Easing.linear,
+    });
+    
+    reloadAnimation.current.start(() => {
+      setReloading(false);
+      setAmmo(30);
+      setReloadProgress(0);
+    });
+    
+    if (reloadIntervalRef.current) {
+      clearInterval(reloadIntervalRef.current);
+    }
+    
+    const listener = reloadAnimValue.addListener(({ value }) => {
+      setReloadProgress(Math.min(value, 100));
+    });
+    
+    setTimeout(() => {
+      reloadAnimValue.removeListener(listener);
+      if (reloadIntervalRef.current) {
+        clearInterval(reloadIntervalRef.current);
+        reloadIntervalRef.current = null;
+      }
+    }, RELOAD_TIME + 100);
+  };
 
   // Initialize game and clear overlay state
   useEffect(() => {
     const init = async () => {
       try {
-        // Clear the overlay state for testing
         await AsyncStorage.removeItem('hasSeenHomeOverlay');
         console.log('Cleared overlay state');
       } catch (error) {
@@ -176,17 +254,14 @@ export default function ShootGame() {
       useNativeDriver: false,
     }).start();
     
-    // Game over if health reaches 0
     if (health <= 0 && gameState === 'playing') {
       setGameState('game_over');
       Vibration.vibrate(500);
       
-      // Update high score if needed
       if (score > highScore) {
         setHighScore(score);
       }
 
-      // Update user stats in Firestore
       const user = auth.currentUser;
       if (user) {
         updateUserGameStats(user.uid, score)
@@ -202,13 +277,7 @@ export default function ShootGame() {
         console.log('Checking overlay state...');
         const hasSeenOverlay = await AsyncStorage.getItem('hasSeenHomeOverlay');
         console.log('hasSeenOverlay value:', hasSeenOverlay);
-        if (hasSeenOverlay === 'true') {
-          console.log('Setting overlay to false');
-          setShowHomeOverlay(false);
-        } else {
-          console.log('Setting overlay to true');
-          setShowHomeOverlay(true);
-        }
+        setShowHomeOverlay(hasSeenOverlay !== 'true');
       } catch (error) {
         console.error('Error checking overlay state:', error);
       }
@@ -216,17 +285,6 @@ export default function ShootGame() {
     
     checkOverlay();
   }, []);
-
-  const handleCloseHomeOverlay = async () => {
-    console.log('Closing overlay...');
-    try {
-      await AsyncStorage.setItem('hasSeenHomeOverlay', 'true');
-      setShowHomeOverlay(false);
-      console.log('Overlay closed and state saved');
-    } catch (error) {
-      console.error('Error saving overlay state:', error);
-    }
-  };
 
   // Clear all game timers
   const clearAllTimers = () => {
@@ -237,7 +295,6 @@ export default function ShootGame() {
     if (reloadIntervalRef.current) clearInterval(reloadIntervalRef.current);
     if (difficultyTimerRef.current) clearInterval(difficultyTimerRef.current);
     
-    // Stop any ongoing animations
     if (reloadAnimation.current) {
       reloadAnimation.current.stop();
     }
@@ -245,28 +302,21 @@ export default function ShootGame() {
 
   // Start all game timers
   const startGameTimers = () => {
-    // Spawn enemies periodically
     enemySpawnTimerRef.current = setInterval(() => {
-      // Only spawn if we haven't reached the max number of enemies
       if (enemies.length < maxEnemies) {
         spawnEnemy();
       }
     }, spawnInterval);
     
-    // Move enemies
     enemyMoveTimerRef.current = setInterval(moveEnemies, 50);
-    
-    // Move bullets
     bulletMoveTimerRef.current = setInterval(moveBullets, 20);
     
-    // Regenerate ammo slowly
     ammoRegenTimerRef.current = setInterval(() => {
       if (!reloading && ammo < 30) {
         startReload();
       }
     }, 5000);
     
-    // Increase difficulty over time
     difficultyTimerRef.current = setInterval(() => {
       increaseDifficulty();
     }, DIFFICULTY_INCREASE_INTERVAL);
@@ -276,51 +326,38 @@ export default function ShootGame() {
   const spawnEnemy = () => {
     if (gameState !== 'playing') return;
     
-    const angle = Math.random() * 360; // Random spawn angle
+    const angle = Math.random() * 360;
     const angleRad = (angle * Math.PI) / 180;
     const x = Math.cos(angleRad) * SPAWN_RADIUS;
     const y = Math.sin(angleRad) * SPAWN_RADIUS;
     
-    // Enemy types with different probabilities
     let enemyType = Math.random();
     let color = 'red';
     let hits = 1;
     
     if (enemyType > 0.7) {
-      color = 'white'; // Toughest enemy - 3 hits
+      color = 'white';
       hits = 3;
     } else if (enemyType > 0.4) {
-      color = 'blue'; // Medium enemy - 2 hits
+      color = 'blue';
       hits = 2;
-    } else {
-      color = 'red'; // Basic enemy - 1 hit
-      hits = 1;
     }
     
-    // Base speed and speed multipliers based on color
     const baseSpeed = 2;
-    let speedMultiplier = 1;
-    
-    if (color === 'red') {
-      speedMultiplier = 1.5; // Red enemies are fastest (1.5x)
-    } else if (color === 'blue') {
-      speedMultiplier = 1.25; // Blue enemies are second fastest (1.25x)
-    } else if (color === 'white') {
-      speedMultiplier = 1.2; // White enemies are slowest but still faster than before (1.2x)
-    }
+    let speedMultiplier = color === 'red' ? 1.5 : color === 'blue' ? 1.25 : 1.2;
     
     setEnemies(prev => [
       ...prev,
       {
-        id: Date.now() + Math.random(), // Unique ID
+        id: Date.now() + Math.random(),
         x,
         y,
         angle,
         color,
         hits,
-        speed: baseSpeed * speedMultiplier, // Apply speed multiplier
-        scale: new Animated.Value(0), // For spawn animation
-        isNew: true, // Mark as new enemy
+        speed: baseSpeed * speedMultiplier,
+        scale: new Animated.Value(0),
+        isNew: true,
       },
     ]);
   };
@@ -332,7 +369,6 @@ export default function ShootGame() {
     setEnemies(prevEnemies =>
       prevEnemies
         .map(enemy => {
-          // Animate scale if enemy just spawned
           if (enemy.isNew) {
             Animated.timing(enemy.scale, {
               toValue: 1,
@@ -340,7 +376,6 @@ export default function ShootGame() {
               useNativeDriver: true,
             }).start();
             
-            // Update enemy to no longer be new
             return { ...enemy, isNew: false };
           }
           
@@ -349,125 +384,18 @@ export default function ShootGame() {
           const newY = enemy.y - Math.sin(angleRad) * enemy.speed;
           const distanceToCenter = Math.sqrt(newX ** 2 + newY ** 2);
 
-          // Check collision with player
           if (distanceToCenter < PLAYER_RADIUS) {
-            // Damage player based on enemy type
             const damage = enemy.color === 'white' ? 30 : 
                           enemy.color === 'blue' ? 20 : 10;
             setHealth(prev => Math.max(prev - damage, 0));
-            
-            // Vibrate on hit
             Vibration.vibrate(100);
-            
-            return null; // Remove enemy that hit player
+            return null;
           }
           
           return { ...enemy, x: newX, y: newY };
         })
         .filter(Boolean) as Enemy[]
     );
-  };
-
-  // Shoot a bullet in a specific direction
-  const shootBullet = (dirX: number, dirY: number) => {
-    if (gameState !== 'playing' || reloading) return;
-    
-    // Check if we have ammo
-    if (ammo <= 0) {
-      // Start reloading
-      startReload();
-      return;
-    }
-    
-    // Decrease ammo
-    setAmmo(prev => prev - 1);
-    
-    // Calculate direction vector from center to tap point
-    // Normalize the direction vector to ensure consistent speed
-    const distance = Math.sqrt(dirX * dirX + dirY * dirY);
-    
-    // Avoid division by zero
-    if (distance < 0.001) {
-      // If tapping exactly on center, shoot right (arbitrary choice)
-      setBullets(prev => [
-        ...prev,
-        {
-          id: Date.now(),
-          x: 0,
-          y: 0,
-          dx: 1, // Default to right direction
-          dy: 0,
-          distance: 0,
-        },
-      ]);
-    } else {
-      // Normal case - shoot in the exact direction of the tap
-      const normalizedDx = dirX / distance;
-      const normalizedDy = dirY / distance;
-      
-      setBullets(prev => [
-        ...prev,
-        {
-          id: Date.now(),
-          x: 0,
-          y: 0,
-          dx: normalizedDx,
-          dy: normalizedDy,
-          distance: 0,
-        },
-      ]);
-    }
-    
-    // Vibrate on shoot
-    Vibration.vibrate(50);
-  };
-
-  // Start reload animation
-  const startReload = () => {
-    setReloading(true);
-    setReloadProgress(0);
-    
-    // Cancel any existing reload animation
-    if (reloadAnimation.current) {
-      reloadAnimation.current.stop();
-    }
-    
-    // Reset animation value
-    reloadAnimValue.setValue(0);
-    
-    // Create animation to track reload progress
-    reloadAnimation.current = Animated.timing(reloadAnimValue, {
-      toValue: 100,
-      duration: RELOAD_TIME, // 1 second for reload (changed from 2000)
-      useNativeDriver: false,
-      easing: Easing.linear,
-    });
-    
-    // Start animation
-    reloadAnimation.current.start(() => {
-      setReloading(false);
-      setAmmo(30);
-      setReloadProgress(0);
-    });
-    
-    // Update progress value for UI
-    if (reloadIntervalRef.current) {
-      clearInterval(reloadIntervalRef.current);
-    }
-    
-    // Use a listener to track the animation value
-    const listener = reloadAnimValue.addListener(({ value }) => {
-      setReloadProgress(Math.min(value, 100));
-    });
-    
-    // Clear listener when done
-    setTimeout(() => {
-      reloadAnimValue.removeListener(listener);
-      if (reloadIntervalRef.current) {
-        clearInterval(reloadIntervalRef.current);
-        reloadIntervalRef.current = null;
-      }
-    }, RELOAD_TIME + 100); // Adjusted timeout to match reload time
   };
 
   // Move all bullets and check collisions
@@ -477,12 +405,10 @@ export default function ShootGame() {
     setBullets(prevBullets =>
       prevBullets
         .map(bullet => {
-          // Move bullet along its direction vector with consistent speed
           const newX = bullet.x + bullet.dx * BULLET_SPEED;
           const newY = bullet.y + bullet.dy * BULLET_SPEED;
           const newDistance = Math.sqrt(newX * newX + newY * newY);
           
-          // Remove bullet if it goes too far
           if (newDistance > SPAWN_RADIUS * 1.5) {
             return null;
           }
@@ -497,7 +423,6 @@ export default function ShootGame() {
         .filter(Boolean) as Bullet[]
     );
     
-    // Check bullet-enemy collisions
     checkBulletCollisions();
   };
 
@@ -509,9 +434,7 @@ export default function ShootGame() {
       setEnemies(prevEnemies => {
         let newEnemies = [...prevEnemies];
         let scoreIncrease = 0;
-        let enemiesDestroyed = 0;
         
-        // Check each bullet against each enemy
         for (let i = remainingBullets.length - 1; i >= 0; i--) {
           const bullet = remainingBullets[i];
           let bulletHit = false;
@@ -522,40 +445,29 @@ export default function ShootGame() {
               (enemy.x - bullet.x) ** 2 + (enemy.y - bullet.y) ** 2
             );
             
-            // Improved hitbox size for better hit detection
-            // Use a slightly larger hitbox for better gameplay feel
             const hitboxSize = ENEMY_SIZE * 0.8;
             if (distanceToEnemy < hitboxSize) {
               bulletHit = true;
-              
-              // Reduce enemy hits
               const newHits = enemy.hits - 1;
               
               if (newHits <= 0) {
-                // Enemy destroyed
                 newEnemies.splice(j, 1);
-                enemiesDestroyed++;
-                
-                // Score based on enemy type
                 const pointValue = enemy.color === 'white' ? 30 : 
                                   enemy.color === 'blue' ? 20 : 10;
                 scoreIncrease += pointValue;
               } else {
-                // Enemy damaged but not destroyed
                 newEnemies[j] = { ...enemy, hits: newHits };
               }
               
-              break; // Bullet can only hit one enemy
+              break;
             }
           }
           
-          // Remove bullet if it hit something
           if (bulletHit) {
             remainingBullets.splice(i, 1);
           }
         }
         
-        // Update score
         if (scoreIncrease > 0) {
           setScore(prev => prev + scoreIncrease);
         }
@@ -577,12 +489,10 @@ export default function ShootGame() {
     setReloading(false);
     setRotation(0);
     
-    // Reset spawn manager values
     setDifficultyLevel(1);
     setSpawnInterval(INITIAL_SPAWN_INTERVAL);
     setMaxEnemies(MAX_ENEMIES_INITIAL);
     
-    // Reset the fade animation to ensure screen isn't white on first game
     fadeAnim.setValue(0);
     
     setGameState('playing');
@@ -603,6 +513,28 @@ export default function ShootGame() {
     router.navigate('/leaderboard');
   };
 
+  // Increase game difficulty
+  const increaseDifficulty = () => {
+    if (gameState !== 'playing') return;
+    
+    setDifficultyLevel(prev => prev + 1);
+    setMaxEnemies(prev => prev + MAX_ENEMIES_INCREASE_RATE);
+    
+    setSpawnInterval(prev => {
+      const newInterval = prev - SPAWN_INTERVAL_DECREASE_RATE;
+      return Math.max(newInterval, MIN_SPAWN_INTERVAL);
+    });
+    
+    fadeAnim.setValue(0.7);
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+    
+    Vibration.vibrate(200);
+  };
+
   // Render crosshair
   const renderCrosshair = () => (
     <View style={styles.crosshairContainer}>
@@ -611,32 +543,60 @@ export default function ShootGame() {
     </View>
   );
 
-  // Render aim indicator - shows where the last tap was
-  const renderAimIndicator = () => {
-    // Removed this function's implementation to remove the last tap icon
-    return null;
-  };
-
-  // Render direction arrow
-  const renderDirectionArrow = () => {
-    return null; // Removed direction arrow functionality
+  // Render reload indicator
+  const renderReloadIndicator = () => {
+    if (!reloading) return null;
+    
+    const radius = PLAYER_RADIUS / 2;
+    const circumference = 2 * Math.PI * radius;
+    const fillAmount = (reloadProgress / 100) * circumference;
+    const dashArray = `${fillAmount} ${circumference}`;
+    
+    return (
+      <View style={styles.reloadIndicatorContainer}>
+        <Svg width={PLAYER_RADIUS} height={PLAYER_RADIUS} viewBox={`0 0 ${PLAYER_RADIUS} ${PLAYER_RADIUS}`}>
+          <Circle
+            cx={PLAYER_RADIUS / 2}
+            cy={PLAYER_RADIUS / 2}
+            r={radius}
+            stroke="rgba(255,255,255,0.3)"
+            strokeWidth={2}
+            fill="transparent"
+          />
+          
+          <Circle
+            cx={PLAYER_RADIUS / 2}
+            cy={PLAYER_RADIUS / 2}
+            r={radius}
+            stroke={colors.secondary}
+            strokeWidth={3}
+            strokeDasharray={dashArray}
+            strokeDashoffset={0}
+            strokeLinecap="round"
+            fill="transparent"
+            transform={`rotate(-90, ${PLAYER_RADIUS / 2}, ${PLAYER_RADIUS / 2})`}
+          />
+        </Svg>
+        
+        <Text style={styles.reloadText}>
+          {Math.round(reloadProgress)}%
+        </Text>
+      </View>
+    );
   };
 
   // Render HUD (Heads Up Display)
   const renderHUD = () => (
     <View style={styles.hudContainer}>
-      {/* Score */}
       <View style={styles.scoreContainer}>
         <ThemedText style={styles.scoreText}>Score: {score}</ThemedText>
         <ThemedText style={styles.scoreText}>High Score: {highScore}</ThemedText>
       </View>
       
-      {/* Level indicator */}
       <View style={styles.levelContainer}>
         <ThemedText style={styles.levelText}>Level: {difficultyLevel}</ThemedText>
       </View>
       
-      {/* Health Bar */}
       <View style={styles.healthBarContainer}>
         <ThemedText style={styles.healthText}>Health</ThemedText>
         <View style={styles.healthBarBackground}>
@@ -658,14 +618,12 @@ export default function ShootGame() {
         </View>
       </View>
       
-      {/* Ammo Counter */}
       <View style={styles.ammoContainer}>
         <ThemedText style={styles.ammoText}>
           {reloading ? 'RELOADING...' : `Ammo: ${ammo}/30`}
         </ThemedText>
       </View>
       
-      {/* Pause Button */}
       {gameState === 'playing' && (
         <TouchableOpacity style={styles.pauseButton} onPress={togglePause}>
           <Text style={styles.pauseButtonText}>II</Text>
@@ -673,54 +631,6 @@ export default function ShootGame() {
       )}
     </View>
   );
-
-  // Render reload progress indicator
-  const renderReloadIndicator = () => {
-    if (!reloading) return null;
-    
-    // Calculate the circumference of the circle
-    const radius = PLAYER_RADIUS / 2;
-    const circumference = 2 * Math.PI * radius;
-    
-    // Calculate the filled portion based on progress
-    const fillAmount = (reloadProgress / 100) * circumference;
-    const dashArray = `${fillAmount} ${circumference}`;
-    
-    return (
-      <View style={styles.reloadIndicatorContainer}>
-        <Svg width={PLAYER_RADIUS} height={PLAYER_RADIUS} viewBox={`0 0 ${PLAYER_RADIUS} ${PLAYER_RADIUS}`}>
-          {/* Background circle */}
-          <Circle
-            cx={PLAYER_RADIUS / 2}
-            cy={PLAYER_RADIUS / 2}
-            r={radius}
-            stroke="rgba(255,255,255,0.3)"
-            strokeWidth={2}
-            fill="transparent"
-          />
-          
-          {/* Progress circle */}
-          <Circle
-            cx={PLAYER_RADIUS / 2}
-            cy={PLAYER_RADIUS / 2}
-            r={radius}
-            stroke={colors.secondary}
-            strokeWidth={3}
-            strokeDasharray={dashArray}
-            strokeDashoffset={0}
-            strokeLinecap="round"
-            fill="transparent"
-            transform={`rotate(-90, ${PLAYER_RADIUS / 2}, ${PLAYER_RADIUS / 2})`}
-          />
-        </Svg>
-        
-        {/* Reload text */}
-        <Text style={styles.reloadText}>
-          {Math.round(reloadProgress)}%
-        </Text>
-      </View>
-    );
-  };
 
   // Render game over screen
   const renderGameOver = () => (
@@ -804,38 +714,10 @@ export default function ShootGame() {
     </View>
   );
 
-  // Increase game difficulty
-  const increaseDifficulty = () => {
-    if (gameState !== 'playing') return;
-    
-    setDifficultyLevel(prev => prev + 1);
-    
-    // Increase max enemies
-    setMaxEnemies(prev => prev + MAX_ENEMIES_INCREASE_RATE);
-    
-    // Decrease spawn interval (make enemies spawn faster)
-    setSpawnInterval(prev => {
-      const newInterval = prev - SPAWN_INTERVAL_DECREASE_RATE;
-      return Math.max(newInterval, MIN_SPAWN_INTERVAL); // Don't go below minimum
-    });
-    
-    // Visual feedback for difficulty increase - flash white and then return to transparent
-    fadeAnim.setValue(0.7); // Start with high opacity
-    Animated.timing(fadeAnim, {
-      toValue: 0, // Animate to fully transparent
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
-    
-    // Vibrate to indicate difficulty increase
-    Vibration.vibrate(200);
-  };
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style="light" />
       
-      {/* Game environment */}
       <View style={styles.gameEnvironment} {...panResponder.panHandlers}>
         {/* Game background - retro grid pattern */}
         <View style={[styles.gameBackground, { backgroundColor: colorScheme === 'dark' ? '#121212' : '#f0f0f0' }]}>
@@ -938,8 +820,6 @@ export default function ShootGame() {
         {/* Crosshair - centered */}
         {gameState === 'playing' && renderCrosshair()}
         
-        {/* Removed aim indicator */}
-        
         {/* HUD */}
         {(gameState === 'playing' || gameState === 'paused') && renderHUD()}
         
@@ -1006,13 +886,13 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'white',
-    pointerEvents: 'none', // Make sure it doesn't interfere with touch events
+    pointerEvents: 'none',
   },
   enemy: {
     position: 'absolute',
     width: ENEMY_SIZE,
     height: ENEMY_SIZE,
-    borderRadius: 0, // Square for pixelated look
+    borderRadius: 0,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1026,7 +906,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: BULLET_SIZE,
     height: BULLET_SIZE,
-    borderRadius: 0, // Square for pixelated look
+    borderRadius: 0,
   },
   playerBase: {
     position: 'absolute',
@@ -1075,7 +955,7 @@ const styles = StyleSheet.create({
   scoreText: {
     fontSize: 18,
     fontWeight: 'bold',
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', // Retro font
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   levelContainer: {
     alignItems: 'center',
@@ -1084,7 +964,7 @@ const styles = StyleSheet.create({
   levelText: {
     fontSize: 18,
     fontWeight: 'bold',
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', // Retro font
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   healthBarContainer: {
     marginBottom: 10,
@@ -1092,12 +972,12 @@ const styles = StyleSheet.create({
   healthText: {
     fontSize: 14,
     marginBottom: 5,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', // Retro font
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   healthBarBackground: {
     height: 15,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: 0, // Square for pixelated look
+    borderRadius: 0,
     overflow: 'hidden',
   },
   healthBarFill: {
@@ -1109,7 +989,7 @@ const styles = StyleSheet.create({
   ammoText: {
     fontSize: 16,
     fontWeight: 'bold',
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', // Retro font
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   pauseButton: {
     position: 'absolute',
@@ -1118,7 +998,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 0, // Square for pixelated look
+    borderRadius: 0,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1126,7 +1006,7 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', // Retro font
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   modalContainer: {
     position: 'absolute',
@@ -1137,7 +1017,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingBottom: 100, // This will move the modal up
+    paddingBottom: 100,
   },
   modalContent: {
     width: '80%',
@@ -1151,14 +1031,14 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', // Retro font
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     textAlign: 'center',
   },
   modalText: {
     fontSize: 16,
     marginBottom: 10,
     textAlign: 'center',
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', // Retro font
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   buttonRow: {
     flexDirection: 'row',
@@ -1166,7 +1046,7 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: 20,
     marginBottom: 15,
-    paddingHorizontal: 0, // Remove padding as we'll control spacing with button width
+    paddingHorizontal: 0,
   },
   button: {
     paddingVertical: 10,
@@ -1177,7 +1057,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.5)',
     marginVertical: 5,
-    width: '100%', // Make submit score button full width
+    width: '100%',
   },
   iconButton: {
     padding: 8,
@@ -1186,14 +1066,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.5)',
-    width: 42, // Slightly larger for better spacing
-    height: 42, // Keep it square
+    width: 42,
+    height: 42,
   },
   buttonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', // Retro font
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   reloadIndicatorContainer: {
     position: 'absolute',
@@ -1221,4 +1101,4 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'white',
   },
-});
+}); 

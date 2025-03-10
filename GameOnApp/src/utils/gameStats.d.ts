@@ -1,0 +1,1 @@
+export function updateUserGameStats(userId: string, score: number): Promise<void>; 

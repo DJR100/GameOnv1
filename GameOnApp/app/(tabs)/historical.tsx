@@ -17,6 +17,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { Ionicons } from '@expo/vector-icons';
+import WebView from 'react-native-webview';
 
 // Define a type for historical games
 interface HistoricalGame {
@@ -30,6 +31,8 @@ interface HistoricalGame {
   };
   route: string;
   firstPlacePlayer: string;
+  isWebGame?: boolean;
+  webUrl?: string;
 }
 
 // This would normally come from an API or database
@@ -46,6 +49,32 @@ const mockHistoricalGames: HistoricalGame[] = [
     route: '/historical/pong',
     firstPlacePlayer: 'JohnDoe',
   },
+  {
+    id: '2',
+    title: 'Snake',
+    date: '03/15/2024',
+    coverImage: {
+      url: null,
+      setBy: null,
+      setAt: null
+    },
+    route: '/historical/snake',
+    firstPlacePlayer: 'Player',
+  },
+  {
+    id: '3',
+    title: 'Minesweeper',
+    date: '03/20/2024',
+    coverImage: {
+      url: null,
+      setBy: null,
+      setAt: null
+    },
+    route: '/historical/minesweeper',
+    firstPlacePlayer: 'MineExpert',
+    isWebGame: true,
+    webUrl: 'https://6x37lmo-djr_100-8082.exp.direct/'
+  },
 ];
 
 export default function HistoricalGamesScreen() {
@@ -54,7 +83,14 @@ export default function HistoricalGamesScreen() {
   const colors = Colors['dark']; // Force dark theme
 
   const navigateToGame = (game: HistoricalGame) => {
-    router.push(game.route as any);
+    if (game.isWebGame && game.webUrl) {
+      router.push({
+        pathname: '/webgame',
+        params: { url: game.webUrl, title: game.title }
+      } as any);
+    } else {
+      router.push(game.route as any);
+    }
   };
 
   const renderGameItem = ({ item }: { item: HistoricalGame }) => (
