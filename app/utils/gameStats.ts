@@ -1,5 +1,6 @@
 import { doc, updateDoc, increment, getDoc, collection, query, orderBy, getDocs } from "firebase/firestore";
 import { db } from "@/firebase/config";
+import { getDatabase, ref, set } from 'firebase/database';
 
 export interface GameStats {
   totalGames: number;
@@ -124,4 +125,19 @@ export const updateUserGameStats = async (userId: string, score: number): Promis
     console.error("Error updating game stats:", error);
     throw error;
   }
-}; 
+};
+
+export async function updateUserGameStatsFirebase(
+  uid: string, 
+  gameType: string, 
+  data: { score: number; timestamp: string }
+) {
+  try {
+    const gameRef = doc(db, "games", gameType, "scores", uid);
+    await updateDoc(gameRef, data);
+    console.log('Score saved successfully');
+  } catch (error) {
+    console.error('Error saving score:', error);
+    throw error;
+  }
+} 

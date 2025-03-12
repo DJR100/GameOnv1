@@ -13,13 +13,14 @@ import { ThemedText } from "@/components/ThemedText";
 import WebViewGame from "@/components/WebViewGame";
 import ShooterGame from "@/components/ShooterGame";
 import PongGame from "../historical/pong";
+import HomeOverlay from "@/components/HomeOverlay";
 
-type GameType = "menu" | "shooter" | "pong" | "scoreGenerator";
+type GameState = "menu" | "shooter" | "pong" | "scoreGenerator";
 
 export default function GameScreen() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "light"];
-  const [currentGame, setCurrentGame] = useState<GameType>("menu");
+  const colors = Colors["dark"];
+  const [currentGame, setCurrentGame] = useState<GameState>("shooter");
+  const [showHomeOverlay, setShowHomeOverlay] = useState(true);
 
   const renderGameMenu = () => (
     <View style={styles.menuContainer}>
@@ -56,11 +57,14 @@ export default function GameScreen() {
   const renderGame = () => {
     switch (currentGame) {
       case "shooter":
-        return <ShooterGame />;
+        return <ShooterGame onShowMenu={() => setCurrentGame("menu")} />;
       case "pong":
         return <PongGame />;
       case "scoreGenerator":
-        return <WebViewGame url="https://score-generator.fly.dev" />;
+        return <WebViewGame 
+          url="https://score-generator.fly.dev" 
+          gameType="scoreGenerator" 
+        />;
       default:
         return renderGameMenu();
     }
@@ -72,6 +76,14 @@ export default function GameScreen() {
     >
       <StatusBar style="light" />
       {renderGame()}
+      {showHomeOverlay && currentGame === "shooter" && (
+        <HomeOverlay 
+          onClose={() => {
+            setShowHomeOverlay(false);
+            setCurrentGame("menu");
+          }} 
+        />
+      )}
     </SafeAreaView>
   );
 }

@@ -69,7 +69,11 @@ interface Bullet {
 
 type GameState = "ready" | "playing" | "paused" | "game_over";
 
-export default function ShooterGame() {
+interface ShooterGameProps {
+  onShowMenu?: () => void;
+}
+
+export default function ShooterGame({ onShowMenu }: ShooterGameProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const router = useRouter();
