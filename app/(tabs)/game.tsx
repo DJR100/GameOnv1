@@ -61,11 +61,12 @@ export default function GameScreen() {
       case "pong":
         return <PongGame />;
       case "scoreGenerator":
-        return <WebViewGame 
-          url="https://chromasnake.fly.dev/" 
-          gameType="chromasnake" 
-          
-        />;
+        return (
+          <WebViewGame
+            url="https://chromasnake.fly.dev/"
+            gameType="chromasnake"
+          />
+        );
       default:
         return renderGameMenu();
     }
@@ -78,11 +79,11 @@ export default function GameScreen() {
       <StatusBar style="light" />
       {renderGame()}
       {showHomeOverlay && currentGame === "shooter" && (
-        <HomeOverlay 
+        <HomeOverlay
           onClose={() => {
             setShowHomeOverlay(false);
             setCurrentGame("menu");
-          }} 
+          }}
         />
       )}
     </SafeAreaView>
