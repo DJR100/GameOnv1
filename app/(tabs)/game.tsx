@@ -8,7 +8,6 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { Colors } from "@/constants/Colors";
-import { useColorScheme } from "@/hooks/useColorScheme";
 import { ThemedText } from "@/components/ThemedText";
 import WebViewGame from "@/components/WebViewGame";
 import ShooterGame from "@/components/ShooterGame";
@@ -62,7 +61,7 @@ export default function GameScreen() {
         return <PongGame />;
       case "scoreGenerator":
         return <WebViewGame 
-          url="https://chromasnake.fly.dev/" 
+          url="http://localhost:8080" 
           gameType="chromasnake" 
           
         />;
