@@ -8,7 +8,6 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { Colors } from "@/constants/Colors";
-import { useColorScheme } from "@/hooks/useColorScheme";
 import { ThemedText } from "@/components/ThemedText";
 import WebViewGame from "@/components/WebViewGame";
 import ShooterGame from "@/components/ShooterGame";
@@ -61,12 +60,11 @@ export default function GameScreen() {
       case "pong":
         return <PongGame />;
       case "scoreGenerator":
-        return (
-          <WebViewGame
-            url="https://chromasnake.fly.dev/"
-            gameType="chromasnake"
-          />
-        );
+        return <WebViewGame 
+          url="https://chromasnake.fly.dev/" 
+          gameType="chromasnake" 
+          
+        />;
       default:
         return renderGameMenu();
     }
@@ -79,11 +77,11 @@ export default function GameScreen() {
       <StatusBar style="light" />
       {renderGame()}
       {showHomeOverlay && currentGame === "shooter" && (
-        <HomeOverlay
+        <HomeOverlay 
           onClose={() => {
             setShowHomeOverlay(false);
             setCurrentGame("menu");
-          }}
+          }} 
         />
       )}
     </SafeAreaView>

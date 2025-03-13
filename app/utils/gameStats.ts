@@ -141,13 +141,14 @@ interface GameScoreData {
   isComplete: boolean;        // Confirmation that all attempts are done
 }
 
-export async function updateUserGameStatsFirebase(
-  uid: string, 
-  gameType: string, 
-  data: GameScoreData
-) {
+export const updateUserGameStatsFirebase = async (uid: string, gameType: string, stats: any) => {
+  console.log("updateUserGameStatsFirebase called with stats:", stats);
+  
+  // Log the scores specifically
+  console.log("Scores being saved to Firebase:", stats.allScores);
+  
   try {
-    console.log('Starting to save game session to Firebase...', { uid, gameType, data });
+    console.log('Starting to save game session to Firebase...', { uid, gameType, stats });
     const gameRef = doc(db, "games", gameType, "scores", uid);
     
     // First, check if document exists
@@ -158,18 +159,18 @@ export async function updateUserGameStatsFirebase(
       // First time playing - create new document
       console.log('Creating new game session record');
       await setDoc(gameRef, {
-        ...data,
+        ...stats,
         lastUpdated: new Date().toISOString(),
         attempts: [{
-          scores: data.allScores,
-          attemptDetails: data.attemptDetails,
-          highestScore: data.highestScore,
-          timestamp: data.timestamp
+          scores: stats.allScores,
+          attemptDetails: stats.attemptDetails,
+          highestScore: stats.highestScore,
+          timestamp: stats.timestamp
         }],
         stats: {
           gamesPlayed: 1,
-          bestScore: data.highestScore,
-          lastPlayed: data.timestamp
+          bestScore: stats.highestScore,
+          lastPlayed: stats.timestamp
         }
       });
     } else {
@@ -179,25 +180,25 @@ export async function updateUserGameStatsFirebase(
       
       // Prepare the new attempt data
       const newAttempt = {
-        scores: data.allScores,
-        attemptDetails: data.attemptDetails,
-        highestScore: data.highestScore,
-        timestamp: data.timestamp
+        scores: stats.allScores,
+        attemptDetails: stats.attemptDetails,
+        highestScore: stats.highestScore,
+        timestamp: stats.timestamp
       };
 
       // Update the document
       await setDoc(gameRef, {
-        allScores: data.allScores,
-        attemptDetails: data.attemptDetails,
-        highestScore: data.highestScore,
-        sessionHighScore: data.sessionHighScore,
-        overallHighScore: Math.max(currentHighScore, data.highestScore),
+        allScores: stats.allScores,
+        attemptDetails: stats.attemptDetails,
+        highestScore: stats.highestScore,
+        sessionHighScore: stats.sessionHighScore,
+        overallHighScore: Math.max(currentHighScore, stats.highestScore),
         lastUpdated: new Date().toISOString(),
         attempts: [...(existingData.attempts || []), newAttempt],
         stats: {
           gamesPlayed: (existingData.stats?.gamesPlayed || 0) + 1,
-          bestScore: Math.max(currentHighScore, data.highestScore),
-          lastPlayed: data.timestamp
+          bestScore: Math.max(currentHighScore, stats.highestScore),
+          lastPlayed: stats.timestamp
         }
       }, { merge: true });
 
@@ -205,8 +206,9 @@ export async function updateUserGameStatsFirebase(
     }
     
     console.log('Game session saved successfully');
+    return true;
   } catch (error) {
     console.error('Error saving game session:', error);
     throw error;
   }
-} 
+}; 

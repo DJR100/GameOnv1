@@ -20,7 +20,9 @@
       "infoPlist": {
         "UIUserInterfaceStyle": "Dark",
         "ITSAppUsesNonExemptEncryption": false,
-        "UIBackgroundModes": ["remote-notification"],
+        "UIBackgroundModes": [
+          "remote-notification"
+        ],
         "config": {
           "googleSignIn": {
             "reservedClientId": "com.googleusercontent.apps.397096414574-c6vo7gut9mm58pi818bleht0vakn36l"
@@ -69,6 +71,9 @@
     "extra": {
       "router": {
         "origin": false
+      },
+      "eas": {
+        "projectId": "66105bd1-c84f-40e8-a73a-6bc3bd09365d"
       }
     },
     "eas": {

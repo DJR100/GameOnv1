@@ -83,26 +83,40 @@ export default function WebViewGame({ url, gameType }: WebViewGameProps) {
       return;
     }
 
+    // Preserve the original scores exactly as received
+    const originalScores = [...data.scores];
+    console.log("Original scores (unmodified):", originalScores);
+    
+    // Only sanitize to handle NaN or non-number values, not to cap
+    const sanitizedScores = data.scores.map(score => (
+      typeof score === 'number' && !isNaN(score) ? score : 0
+    ));
+    console.log("Sanitized scores (only fixing NaN):", sanitizedScores);
+    
     // Verify highest score calculation
-    const calculatedMax = Math.max(...data.scores);
-    if (calculatedMax !== data.highestScore) {
-      console.warn(
-        "Highest score mismatch. Using calculated value:",
-        calculatedMax
-      );
-    }
+    const calculatedMax = Math.max(...sanitizedScores);
+    console.log("Calculated max score:", calculatedMax, "type:", typeof calculatedMax);
 
     try {
-      // Save complete game session to Firebase
-      await updateUserGameStatsFirebase(uid, gameType, {
-        allScores: data.scores,
+      // Create the data object to save, ensuring we don't modify the scores
+      const dataToSave = {
+        allScores: sanitizedScores, // Use sanitized scores that only fix NaN values
         attemptDetails: data.attemptScores,
         highestScore: calculatedMax,
         sessionHighScore: data.allHighScores.sessionHighScore,
         overallHighScore: data.allHighScores.overallHighScore,
         timestamp: new Date().toISOString(),
         isComplete: true,
-      });
+      };
+      
+      // Log the exact data being sent to Firebase
+      console.log("Data being sent to Firebase:", JSON.stringify(dataToSave));
+      
+      // Save to Firebase
+      await updateUserGameStatsFirebase(uid, gameType, dataToSave);
+      
+      // Log after Firebase update
+      console.log("Firebase update completed");
 
       // Reset state after successful save
       setAttempts([]);
@@ -116,24 +130,30 @@ export default function WebViewGame({ url, gameType }: WebViewGameProps) {
   };
 
   const handleMessage = async (event: any) => {
+    console.log("Raw message data:", event.nativeEvent.data);
+    
     try {
+      // Parse the data without any transformations
       const data = JSON.parse(event.nativeEvent.data) as GameMessage;
+      console.log("Parsed data:", data);
+      
       const uid = auth.currentUser?.uid;
-
       if (!uid) {
         console.error("No user ID available - cannot process game data");
         return;
       }
 
-      console.log("Received WebView message:", data);
-
       switch (data.type) {
         case "attemptScore":
+          // Log the raw score to verify no capping is happening
+          console.log("Raw attempt score:", data.score, "type:", typeof data.score);
           handleAttemptScore(data);
           break;
 
         case "finalScores":
           if (data.isComplete) {
+            // Log the raw scores array to verify no capping
+            console.log("Raw final scores:", data.scores, "types:", data.scores.map(s => typeof s));
             await handleFinalScores(data, uid);
           }
           break;
