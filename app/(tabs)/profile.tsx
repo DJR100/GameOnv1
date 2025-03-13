@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Image, ScrollView, PermissionsAndroid } from 'react-native';
+import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Image, ScrollView } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithCredential, updateProfile, OAuthProvider } from 'firebase/auth';
@@ -13,7 +13,6 @@ import DeleteAccountButton from '../components/DeleteAccountButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { Tabs } from 'expo-router';
-import messaging from '@react-native-firebase/messaging';
 import * as AppleAuthentication from 'expo-apple-authentication';
 
 // Initialize WebBrowser for OAuth
@@ -126,24 +125,6 @@ export default function ProfileScreen() {
   useEffect(() => {
     handleSignInResponse();
   }, [response]);
-
-  useEffect(() => {
-    (async () => {
-      if (Platform.OS === 'ios') {
-        const authStatus = await messaging().requestPermission();
-        const enabled = authStatus === messaging.AuthorizationStatus.AUTHORIZED || authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-        if (enabled) {
-          console.log('Authorization status:', authStatus);
-          await messaging().registerDeviceForRemoteMessages()
-        }
-      } else {
-        PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
-        );
-        await messaging().registerDeviceForRemoteMessages()
-      }
-    })();
-  })
 
   useEffect(() => {
     const loadUserStats = async () => {

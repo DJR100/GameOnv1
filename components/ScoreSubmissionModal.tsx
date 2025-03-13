@@ -54,8 +54,11 @@ const ScoreSubmissionModal: React.FC<ScoreSubmissionModalProps> = ({
   };
 
   const handleSubmit = async () => {
+    console.log('Score submission initiated for score:', score);
+    
     if (!auth.currentUser) {
       try {
+        console.log('No authenticated user, storing pending score:', score);
         // Store the pending score
         await AsyncStorage.setItem('pendingScore', score.toString());
         onClose();  // Close the modal
@@ -83,12 +86,15 @@ const ScoreSubmissionModal: React.FC<ScoreSubmissionModalProps> = ({
 
     try {
       setIsSubmitting(true);
+      console.log('Submitting score to leaderboard:', score);
       
       // Submit score to leaderboard
-      await submitScore(score);
+      const result = await submitScore(score);
+      console.log('Score submission result:', result);
       
       // Update user's game stats
       await updateUserGameStats(auth.currentUser.uid, score);
+      console.log('User game stats updated with score:', score);
       
       setIsSuccess(true);
       Alert.alert('Success', 'Score submitted!');

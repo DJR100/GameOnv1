@@ -75,7 +75,7 @@ interface ShooterGameProps {
 
 export default function ShooterGame({ onShowMenu }: ShooterGameProps) {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "light"];
+  const colors = Colors[colorScheme as 'light' | 'dark' ?? "light"];
   const router = useRouter();
 
   // Game state
@@ -332,7 +332,9 @@ export default function ShooterGame({ onShowMenu }: ShooterGameProps) {
 
     setBullets(updatedBullets);
     setEnemies(updatedEnemies);
-    setScore((prev) => prev + scoreIncrease);
+    const newScore = score + scoreIncrease;
+    console.log('Score updated:', { previousScore: score, increase: scoreIncrease, newScore });
+    setScore(newScore);
   };
 
   const checkGameOver = () => {
@@ -349,19 +351,24 @@ export default function ShooterGame({ onShowMenu }: ShooterGameProps) {
 
   const handleGameOver = async () => {
     setGameState("game_over");
+    console.log('Game over triggered with score:', score);
 
     if (score > highScore) {
       setHighScore(score);
       await AsyncStorage.setItem("highScore", score.toString());
+      console.log('New high score set:', score);
     }
 
     if (!practiceMode) {
       setAttemptsLeft((prev) => prev - 1);
+      console.log('Attempts left after decrement:', attemptsLeft - 1);
       if (attemptsLeft <= 1) {
+        console.log('Showing score modal for submission, score:', score);
         setShowScoreModal(true);
       }
     } else {
       setPracticeAttemptsLeft((prev) => prev - 1);
+      console.log('Practice mode, attempts left:', practiceAttemptsLeft - 1);
     }
   };
 

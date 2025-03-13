@@ -62,8 +62,9 @@ export default function GameScreen() {
         return <PongGame />;
       case "scoreGenerator":
         return <WebViewGame 
-          url="https://score-generator.fly.dev" 
-          gameType="scoreGenerator" 
+          url="https://chromasnake.fly.dev/" 
+          gameType="chromasnake" 
+          
         />;
       default:
         return renderGameMenu();

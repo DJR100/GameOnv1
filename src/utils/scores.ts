@@ -4,10 +4,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export async function submitScore(score: number) {
   try {
+    console.log('submitScore called with score:', score);
     console.log('Current auth state:', auth.currentUser); // Debug log
 
     if (!auth.currentUser) {
-      console.log('No user authenticated, storing pending score'); // Debug log
+      console.log('No user authenticated, storing pending score:', score); // Debug log
       await AsyncStorage.setItem('pendingScore', score.toString());
       return { requiresAuth: true };
     }
@@ -17,22 +18,22 @@ export async function submitScore(score: number) {
     
     const userId = auth.currentUser.uid;
     const playerName = auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'Anonymous';
-    console.log('Submitting score for user:', userId, 'with name:', playerName); // Debug log
+    console.log('Submitting score for user:', userId, 'with name:', playerName, 'score value:', score); // Debug log
 
     const scoreRef = doc(db, 'scores', `${userId}_${Date.now()}`);
     await setDoc(scoreRef, {
       score,
       userId,
-      playerName,  // This should now be the correct display name
+      playerName,
       timestamp: serverTimestamp(),
       userEmail: auth.currentUser.email,
       gameType: 'shoot'
     });
     
-    console.log('Score submitted successfully'); // Debug log
+    console.log('Score submitted successfully:', score); // Debug log
     return { success: true };
   } catch (error) {
-    console.error('Detailed submit error:', error); // Debug log
+    console.error('Detailed submit error:', error, 'for score:', score); // Debug log
     throw error;
   }
 }
