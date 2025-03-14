@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Platform,
+  Image,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { Colors } from "@/constants/Colors";
@@ -24,11 +25,17 @@ export default function GameScreen() {
   const renderGameMenu = () => (
     <View style={styles.menuContainer}>
       <View style={styles.titleContainer}>
-        <ThemedText style={styles.title}>GAME ON</ThemedText>
-        <ThemedText style={styles.subtitle}>Select your game</ThemedText>
+        <Image 
+          source={require('@/assets/images/icon.png')} 
+          style={styles.logo}
+          resizeMode="contain"
+        />
+        <ThemedText style={styles.signInText}>Sign-in First to Submit High Score</ThemedText>
+        <ThemedText style={styles.subtitle}>Today's Game</ThemedText>
       </View>
 
       <View style={styles.gameButtonsContainer}>
+        {/* 
         <TouchableOpacity
           style={[styles.gameButton, { backgroundColor: colors.primary }]}
           onPress={() => setCurrentGame("shooter")}
@@ -42,13 +49,21 @@ export default function GameScreen() {
         >
           <ThemedText style={styles.gameButtonText}>Pong</ThemedText>
         </TouchableOpacity>
+        */}
 
         <TouchableOpacity
-          style={[styles.gameButton, { backgroundColor: colors.accent }]}
+          style={[styles.gameButton, { backgroundColor: '#FF3333' }]}
           onPress={() => setCurrentGame("scoreGenerator")}
         >
-          <ThemedText style={styles.gameButtonText}>Score Generator</ThemedText>
+          <ThemedText style={styles.gameButtonText}>Chroma Snake</ThemedText>
         </TouchableOpacity>
+      </View>
+      
+      <View style={[styles.footerContainer, { backgroundColor: '#FF3333' }]}>
+        <ThemedText style={styles.footerTitle}>Today's Prizes</ThemedText>
+        <ThemedText style={styles.footerText}>🥇 $30 Uber Eats Gift Card</ThemedText>
+        <ThemedText style={styles.footerText}>🥈 Chocolate Cake</ThemedText>
+        <ThemedText style={styles.footerText}>🥉 8x Sparkling Water</ThemedText>
       </View>
     </View>
   );
@@ -94,24 +109,33 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: "flex-start",
     alignItems: "center",
     padding: 20,
+    paddingTop: 20,
   },
   titleContainer: {
     alignItems: "center",
-    marginBottom: 50,
+    marginBottom: 20,
+    marginTop: 0,
+    zIndex: 10,
   },
-  title: {
-    fontSize: 48,
-    fontWeight: "bold",
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+  logo: {
+    width: 500,
+    height: 220,
     marginBottom: 10,
   },
   subtitle: {
     fontSize: 24,
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
     opacity: 0.8,
+    marginTop: 10,
+  },
+  signInText: {
+    fontSize: 16,
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    opacity: 0.8,
+    marginTop: 10,
   },
   gameButtonsContainer: {
     width: "100%",
@@ -130,5 +154,33 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "white",
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+  },
+  footerContainer: {
+    position: "absolute",
+    bottom: 100,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    paddingBottom: 10,
+    paddingTop: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    marginHorizontal: 20,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.3)",
+  },
+  footerTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "white",
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    marginBottom: 10,
+  },
+  footerText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    color: "white",
+    marginBottom: 5,
   },
 });

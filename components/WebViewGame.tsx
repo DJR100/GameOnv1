@@ -11,6 +11,7 @@ import { WebView } from "react-native-webview";
 import { auth } from "@/firebase/config";
 import { updateUserGameStatsFirebase } from "@/app/utils/gameStats";
 import { Colors } from "@/constants/Colors";
+import { submitScore } from "@/services/scoreService";
 
 interface WebViewGameProps {
   url: string;
@@ -100,7 +101,7 @@ export default function WebViewGame({ url, gameType }: WebViewGameProps) {
     try {
       // Create the data object to save, ensuring we don't modify the scores
       const dataToSave = {
-        allScores: sanitizedScores, // Use sanitized scores that only fix NaN values
+        allScores: sanitizedScores,
         attemptDetails: data.attemptScores,
         highestScore: calculatedMax,
         sessionHighScore: data.allHighScores.sessionHighScore,
@@ -112,8 +113,26 @@ export default function WebViewGame({ url, gameType }: WebViewGameProps) {
       // Log the exact data being sent to Firebase
       console.log("Data being sent to Firebase:", JSON.stringify(dataToSave));
       
-      // Save to Firebase
+      // Save to Firebase game stats
       await updateUserGameStatsFirebase(uid, gameType, dataToSave);
+      
+      // Also submit the high score to the leaderboard
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          await submitScore({
+            playerName: user.displayName || 'Anonymous',
+            score: calculatedMax,
+            gameType: gameType,
+            timestamp: new Date(),
+            deviceId: uid
+          });
+          console.log("Score submitted to leaderboard:", calculatedMax);
+        }
+      } catch (leaderboardError) {
+        console.error("Error submitting to leaderboard:", leaderboardError);
+        // Don't throw here, we still want to continue even if leaderboard submission fails
+      }
       
       // Log after Firebase update
       console.log("Firebase update completed");

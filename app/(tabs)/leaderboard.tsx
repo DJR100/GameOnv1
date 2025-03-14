@@ -1,25 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, FlatList, TouchableOpacity, TextInput, Platform, ActivityIndicator, Text } from 'react-native';
+import { StyleSheet, View, FlatList, TouchableOpacity, ActivityIndicator, Text, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
 import { getTopScores, ScoreDataWithId } from '@/services/scoreService';
 import { Ionicons } from '@expo/vector-icons';
-import { Timestamp } from 'firebase/firestore';
 
 export default function LeaderboardScreen() {
-  const colorScheme = useColorScheme();
   const colors = Colors['dark']; // Force dark theme
   
   const [leaderboard, setLeaderboard] = useState<ScoreDataWithId[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showNameInput, setShowNameInput] = useState(false);
-  const [playerName, setPlayerName] = useState('');
-  const [username, setUsername] = useState('');
+  
+  // Hardcode the game type to Chroma Snake
+  const gameType = 'chromasnake';
 
   // Fetch leaderboard data when component mounts
   useEffect(() => {
@@ -30,15 +26,14 @@ export default function LeaderboardScreen() {
     try {
       setLoading(true);
       setError(null);
-      console.log('Fetching scores for game type: shoot');
-      const scores = await getTopScores('shoot', 50);
+      console.log(`Fetching scores for Chroma Snake`);
+      // Get scores specifically for chromasnake
+      const scores = await getTopScores(gameType, 50);
       
-      // Transform the data to handle server timestamp
+      // Transform the data
       const transformedScores = scores.map(score => ({
         ...score,
-        timestamp: score.timestamp instanceof Timestamp 
-          ? score.timestamp.toDate() 
-          : new Date(score.timestamp),
+        timestamp: new Date(score.timestamp),
         playerName: score.playerName || 'Anonymous',
         score: Number(score.score)
       }));
@@ -53,26 +48,30 @@ export default function LeaderboardScreen() {
     }
   };
 
-  const handleSubmitName = () => {
-    // This function would be used if you want to add manual score entry from the leaderboard
-    // For now, we'll just hide the input
-    setShowNameInput(false);
-  };
-
   const renderLeaderboardItem = ({ item, index }: { item: ScoreDataWithId, index: number }) => {
     const isTopThree = index < 3;
     
-    // Define softer metallic colors for top 3 positions
+    // Define medal colors for top 3 positions
     const getPositionColor = (position: number) => {
       switch (position) {
-        case 0: return { background: '#FFD700AA', text: '#FFFFFF' }; // Brighter gold (increased opacity)
-        case 1: return { background: '#E8E8E8AA', text: '#FFFFFF' }; // Brighter silver
-        case 2: return { background: '#CD853FAA', text: '#FFFFFF' }; // Brighter bronze
-        default: return { background: colors.card, text: colors.text };
+        case 0: return { background: '#FFD700AA', text: '#FFFFFF' }; // Gold
+        case 1: return { background: '#E8E8E8AA', text: '#FFFFFF' }; // Silver
+        case 2: return { background: '#CD853FAA', text: '#FFFFFF' }; // Bronze
+        default: return { background: '#333333', text: '#FFFFFF' };
       }
     };
     
     const positionColors = getPositionColor(index);
+    
+    // Get rank display (medals for top 3, numbers for others)
+    const getRankDisplay = (position: number) => {
+      switch (position) {
+        case 0: return "🥇";
+        case 1: return "🥈";
+        case 2: return "🥉";
+        default: return `${position + 1}`;
+      }
+    };
     
     return (
       <View style={[
@@ -82,104 +81,77 @@ export default function LeaderboardScreen() {
         <View style={styles.rankContainer}>
           <ThemedText style={[
             styles.rankText, 
-            isTopThree && { color: positionColors.text }
+            { color: positionColors.text }
           ]}>
-            {index + 1}
+            {getRankDisplay(index)}
           </ThemedText>
         </View>
         
         <View style={styles.playerInfo}>
           <ThemedText style={[
             styles.playerName,
-            isTopThree && { color: positionColors.text }
+            { color: positionColors.text }
           ]}>
             {item.playerName}
           </ThemedText>
-          <ThemedText style={styles.dateText}>
-            {new Date(item.timestamp).toLocaleDateString()}
-          </ThemedText>
         </View>
         
-        <ThemedText style={[
-          styles.scoreText,
-          isTopThree && { color: positionColors.text }
-        ]}>
-          {item.score}
-        </ThemedText>
+        <View style={styles.scoreContainer}>
+          <ThemedText style={[
+            styles.scoreText,
+            { color: positionColors.text }
+          ]}>
+            {item.score}
+          </ThemedText>
+        </View>
       </View>
     );
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-      <ThemedView style={styles.content}>
-        {/* Logo */}
-        <View style={styles.logoContainer}>
-          <Text style={[styles.logoText, { color: colors.text }]}>
-            Game<Text style={{ color: colors.primary, fontSize: 42 }}>On</Text>
-          </Text>
-        </View>
+      <StatusBar style="light" />
+      <View style={styles.header}>
+        <Image 
+          source={require('@/assets/images/icon.png')} 
+          style={styles.headerLogo}
+          resizeMode="contain"
+        />
+        <ThemedText style={styles.subtitle}>Leaderboard</ThemedText>
+        
+        <TouchableOpacity 
+          style={styles.refreshButton}
+          onPress={fetchLeaderboardData}
+        >
+          <Ionicons name="refresh" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
 
-        <View style={styles.titleContainer}>
-          <View style={styles.titleContent}>
-            <ThemedText style={styles.title}>Leaderboard</ThemedText>
-            <ThemedText style={styles.subtitle}>Today's Top Players</ThemedText>
-          </View>
-          <TouchableOpacity 
-            style={[styles.refreshButton, { 
-              backgroundColor: colors.primary,
-              shadowColor: colors.primary,
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 4,
-              elevation: 8,
-            }]}
-            onPress={fetchLeaderboardData}
-          >
-            <ThemedText style={styles.buttonText}>Refresh</ThemedText>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#FF3333" />
+          <ThemedText style={styles.loadingText}>Loading leaderboard...</ThemedText>
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <ThemedText style={styles.errorText}>{error}</ThemedText>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchLeaderboardData}>
+            <ThemedText style={styles.retryButtonText}>Retry</ThemedText>
           </TouchableOpacity>
         </View>
-        
-        <ThemedView style={[styles.leaderboardCard, { backgroundColor: colors.card }]}>
-          <View style={[styles.promoCard, { backgroundColor: colors.primary + '15' }]}>
-            <View style={styles.promoItem}>
-              <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
-                <Ionicons name="trophy" size={28} color="#fff" />
-              </View>
-              <View style={styles.promoTextContainer}>
-                <ThemedText style={[styles.promoTextTitle, { color: colors.text }]}>
-                  Daily Prizes
-                </ThemedText>
-                <ThemedText style={[styles.promoTextSubtitle, { color: colors.text + 'CC' }]}>
-                  Top 3 players win exclusive rewards!
-                </ThemedText>
-              </View>
-            </View>
-          </View>
-          
-          {loading ? (
-            <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
-          ) : error ? (
-            <ThemedText style={styles.errorText}>{error}</ThemedText>
-          ) : leaderboard.length === 0 ? (
+      ) : (
+        <FlatList
+          data={leaderboard}
+          keyExtractor={(item) => item.id}
+          renderItem={renderLeaderboardItem}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
-                <Ionicons name="game-controller" size={32} color="#fff" />
-              </View>
-              <ThemedText style={styles.emptyTitle}>No Scores Yet</ThemedText>
-              <ThemedText style={styles.emptyText}>Be the first to play and set a high score!</ThemedText>
+              <ThemedText style={styles.emptyText}>No scores yet. Be the first to play today's game!</ThemedText>
             </View>
-          ) : (
-            <FlatList
-              data={leaderboard}
-              renderItem={renderLeaderboardItem}
-              keyExtractor={item => item.id}
-              contentContainerStyle={styles.leaderboardList}
-            />
-          )}
-        </ThemedView>
-      </ThemedView>
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -187,160 +159,129 @@ export default function LeaderboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#000000',
   },
-  content: {
-    flex: 1,
+  header: {
     padding: 16,
-  },
-  logoContainer: {
-    marginBottom: 20,
-    marginTop: Platform.OS === 'ios' ? 50 : 30,
-  },
-  logoText: {
-    fontSize: 42,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  titleContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
-    paddingHorizontal: 8,
-    marginTop: 8,
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#333333',
+    paddingBottom: 16,
   },
-  titleContent: {
-    flex: 1,
-    paddingRight: 16,
+  headerLogo: {
+    width: 100,
+    height: 50,
+    marginRight: 10,
   },
   title: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 4,
-    includeFontPadding: false,
-    paddingTop: 4,
+    color: '#FFFFFF',
   },
   subtitle: {
-    fontSize: 16,
-    opacity: 0.8,
+    fontSize: 24,
+    fontWeight: 'bold',
   },
-  promoCard: {
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 20,
+  refreshButton: {
+    padding: 10,
+    backgroundColor: '#FF3333',
+    borderRadius: 20,
   },
-  promoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 12,
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
   },
-  promoTextContainer: {
+  loadingText: {
+    marginTop: 16,
+    color: '#FFFFFF',
+  },
+  errorContainer: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
-  promoTextTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
+  errorText: {
+    marginBottom: 16,
+    color: '#FF3333',
+    textAlign: 'center',
   },
-  promoTextSubtitle: {
-    fontSize: 14,
+  retryButton: {
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#FF3333',
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 60,
   },
   emptyContainer: {
     alignItems: 'center',
     padding: 40,
   },
-  emptyTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginVertical: 16,
-  },
   emptyText: {
     fontSize: 16,
     textAlign: 'center',
-    opacity: 0.8,
-    lineHeight: 22,
-  },
-  refreshButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    marginLeft: 16,
-  },
-  buttonText: {
     color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
-  leaderboardCard: {
-    flex: 1,
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    marginTop: 8,
-    marginBottom: 20,
-  },
-  leaderboardList: {
-    paddingBottom: 60,
+    lineHeight: 22,
   },
   leaderboardItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    marginVertical: 6,
+    padding: 12,
     borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    marginBottom: 8,
+    alignItems: 'center',
+    minHeight: 50,
   },
   rankContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.3)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   rankText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
   },
   playerInfo: {
     flex: 1,
+    marginRight: 8,
   },
   playerName: {
     fontSize: 16,
     fontWeight: 'bold',
-    opacity: 1,
+    flexShrink: 1,
   },
-  dateText: {
-    fontSize: 12,
-    opacity: 0.8,
-    marginTop: 2,
+  scoreContainer: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 8,
+    minWidth: 50,
+    alignItems: 'center',
   },
   scoreText: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginLeft: 8,
-    opacity: 1,
   },
-  loader: {
-    marginVertical: 20,
+  profileHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
   },
-  errorText: {
-    textAlign: 'center',
-    color: 'red',
-    marginVertical: 20,
+  profileLogo: {
+    width: 120,
+    height: 60,
+    marginBottom: 16,
   },
 }); 
