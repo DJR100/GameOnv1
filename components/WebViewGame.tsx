@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   StyleSheet,
   View,
@@ -6,12 +6,16 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   SafeAreaView,
+  Alert,
+  Image,
 } from "react-native";
 import { WebView } from "react-native-webview";
-import { auth } from "@/firebase/config";
+import { auth, db } from "@/firebase/config";
 import { updateUserGameStatsFirebase } from "@/app/utils/gameStats";
 import { Colors } from "@/constants/Colors";
 import { submitScore } from "@/services/scoreService";
+import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
+import { useNavigation } from "@react-navigation/native";
 
 interface WebViewGameProps {
   url: string;
@@ -52,6 +56,8 @@ export default function WebViewGame({ url, gameType }: WebViewGameProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const webViewRef = useRef<WebView>(null);
+  const [hasPlayed, setHasPlayed] = useState<boolean>(false);
+  const navigation = useNavigation();
 
   const handleAttemptScore = (data: AttemptScore) => {
     console.log(`Attempt ${data.attemptNumber} completed:`, {
@@ -142,6 +148,44 @@ export default function WebViewGame({ url, gameType }: WebViewGameProps) {
       setIsComplete(true);
       setSessionHighScore(null);
       console.log("Game session saved successfully");
+
+      // Mark game as played
+      try {
+        const userRef = doc(db, "users", uid);
+        
+        // First check if the document exists
+        const userDoc = await getDoc(userRef);
+        
+        if (userDoc.exists()) {
+          // Update existing document
+          await updateDoc(userRef, {
+            [`gameStatus.${gameType}.hasPlayed`]: true,
+            [`gameStatus.${gameType}.completionDate`]: new Date().toISOString(),
+            [`gameStatus.${gameType}.attemptsUsed`]: 3
+          });
+          console.log(`Successfully marked ${gameType} as played for user ${uid}`);
+        } else {
+          // Document doesn't exist - create it with setDoc
+          await setDoc(userRef, {
+            gameStatus: {
+              [gameType]: {
+                hasPlayed: true,
+                completionDate: new Date().toISOString(),
+                attemptsUsed: 3
+              }
+            }
+          });
+          console.log(`Created new user document and marked ${gameType} as played for user ${uid}`);
+        }
+        
+        // Set local state to reflect the change
+        setHasPlayed(true);
+        
+      } catch (error: any) {
+        console.error("Error updating play status:", error);
+        // Show an error to the user
+        setError(`Failed to update game status: ${error.message || 'Unknown error'}`);
+      }
     } catch (saveError) {
       console.error("Error saving game stats:", saveError);
       setError("Failed to save game progress");
@@ -211,6 +255,100 @@ export default function WebViewGame({ url, gameType }: WebViewGameProps) {
       </TouchableOpacity>
     </View>
   );
+
+  // Check if user has already played
+  useEffect(() => {
+    const checkPlayStatus = async () => {
+      if (!auth.currentUser) {
+        console.log("No authenticated user found");
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        const uid = auth.currentUser.uid;
+        console.log(`Checking play status for user ${uid} and game ${gameType}`);
+        
+        const userRef = doc(db, "users", uid);
+        const userDoc = await getDoc(userRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          console.log("User data:", userData);
+          
+          // Check if gameStatus exists and has the game type
+          if (userData.gameStatus && userData.gameStatus[gameType]) {
+            const gameStatus = userData.gameStatus[gameType];
+            console.log(`Game status for ${gameType}:`, gameStatus);
+            
+            if (gameStatus.hasPlayed && gameStatus.attemptsUsed >= 3) {
+              console.log("User has already played this game");
+              setHasPlayed(true);
+            } else {
+              console.log("User has not completed all attempts for this game");
+              setHasPlayed(false);
+            }
+          } else {
+            console.log(`No game status found for ${gameType}`);
+            setHasPlayed(false);
+          }
+        } else {
+          console.log("User document does not exist in Firestore");
+          setHasPlayed(false);
+        }
+      } catch (error) {
+        console.error("Error checking play status:", error);
+        setHasPlayed(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    checkPlayStatus();
+  }, [gameType]);
+
+  // Render locked screen if already played
+  if (hasPlayed) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.lockedContainer}>
+          {/* GameOn Logo Image */}
+          <Image 
+            source={require('@/assets/images/icon.png')} 
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
+          
+          <Text style={styles.lockedTitle}>Game Already Played</Text>
+          <Text style={styles.lockedMessage}>
+            Tune in tomorrow to play the next game!
+          </Text>
+          <Text style={styles.lockedMessage}>
+            Invite 3 friends for another round
+          </Text>
+          
+          <TouchableOpacity 
+            style={styles.inviteButton}
+            onPress={() => {
+              // This will be implemented later
+              console.log("Invite friends button pressed");
+            }}
+          >
+            <Text style={styles.buttonText}>🤝 Invite Friends for Extra Turn 🤝</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.leaderboardButton, { marginTop: 12 }]}
+            onPress={() => navigation.navigate('leaderboard' as never)}
+          >
+            <Text style={styles.buttonText}>
+              🏅 View Leaderboard 🏅
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -312,5 +450,52 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  lockedContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#000',
+  },
+  logoImage: {
+    width: 230,
+    height: 230,
+    marginBottom: 24,
+  },
+  lockedTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 16,
+  },
+  lockedMessage: {
+    fontSize: 16,
+    color: '#ccc',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  inviteButton: {
+    backgroundColor: '#4CAF50', // Green color for invite button
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    width: '100%',
+    alignItems: 'center',
+  },
+  leaderboardButton: {
+    backgroundColor: '#FF3333',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });
