@@ -4,6 +4,11 @@
     "strict": true,
     "jsx": "react-native",
     "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": [
+      "node",
+      "react-native"
+    ],
     "paths": {
       "@/*": [
         "./*"
@@ -11,12 +16,25 @@
       "@firebase/auth": [
         "./node_modules/@firebase/auth/dist/index.rn.d.ts"
       ]
-    }
+    },
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    "lib": [
+      "es2020",
+      "dom"
+    ]
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "babel.config.js",
+    "metro.config.js",
+    "jest.config.js"
   ]
 }
