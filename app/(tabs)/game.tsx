@@ -31,7 +31,6 @@ export default function GameScreen() {
           resizeMode="contain"
         />
         <ThemedText style={styles.signInText}>Sign-in First to Submit High Score</ThemedText>
-        <ThemedText style={styles.subtitle}>Today's Game</ThemedText>
       </View>
 
       <View style={styles.gameButtonsContainer}>
@@ -52,18 +51,18 @@ export default function GameScreen() {
         */}
 
         <TouchableOpacity
-          style={[styles.gameButton, { backgroundColor: '#FF3333' }]}
+          style={[styles.gameButton, { backgroundColor: '#4CAF50' }]}
           onPress={() => setCurrentGame("scoreGenerator")}
         >
-          <ThemedText style={styles.gameButtonText}>Chroma Snake</ThemedText>
+          <ThemedText style={[styles.gameButtonText, { color: 'white' }]}>LevelUp</ThemedText>
+          <ThemedText style={[styles.clickToPlayText, { color: 'white' }]}>Click Here to Play</ThemedText>
         </TouchableOpacity>
       </View>
       
       <View style={[styles.footerContainer, { backgroundColor: '#FF3333' }]}>
-        <ThemedText style={styles.footerTitle}>Today's Prizes</ThemedText>
-        <ThemedText style={styles.footerText}>🥇 $30 Uber Eats Gift Card</ThemedText>
-        <ThemedText style={styles.footerText}>🥈 Chocolate Cake</ThemedText>
-        <ThemedText style={styles.footerText}>🥉 8x Sparkling Water</ThemedText>
+        <ThemedText style={styles.footerText}>$5 Entry Fee</ThemedText>
+        <ThemedText style={styles.footerText}>🥇 Winner Takes All</ThemedText>
+        <ThemedText style={styles.footerText}>Current Prize Pool: $100</ThemedText>
       </View>
     </View>
   );
@@ -76,9 +75,8 @@ export default function GameScreen() {
         return <PongGame />;
       case "scoreGenerator":
         return <WebViewGame 
-          url="https://chromasnake.fly.dev/" 
-          gameType="chromasnake" 
-          
+          url="https://finalgame.fly.dev/" 
+          gameType="levelup" 
         />;
       default:
         return renderGameMenu();
@@ -152,12 +150,17 @@ const styles = StyleSheet.create({
   gameButtonText: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "white",
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+  },
+  clickToPlayText: {
+    fontSize: 16,
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    marginTop: 5,
+    opacity: 0.8,
   },
   footerContainer: {
     position: "absolute",
-    bottom: 100,
+    bottom: 200,
     left: 0,
     right: 0,
     alignItems: "center",

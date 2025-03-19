@@ -1,7 +1,8 @@
 {
   "cli": {
-    "version": ">= 15.0.12",
-    "appVersionSource": "remote"
+    "version": ">= 3.13.3",
+    "appVersionSource": "remote",
+    "requireCommit": false
   },
   "build": {
     "development": {
@@ -13,7 +14,13 @@
       "config": "test.yml"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "ios": {
+        "image": "latest",
+        "cache": {
+          "disabled": true
+        }
+      }
     }
   },
   "submit": {

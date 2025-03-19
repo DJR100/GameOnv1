@@ -286,6 +286,14 @@ export default function ProfileScreen() {
       const userCredential = await signInWithCredential(auth, oauthCredential);
       const user = userCredential.user;
 
+      // Set the display name in Firebase Auth if we have it
+      const displayName = credential.fullName?.givenName || credential.fullName?.familyName || "Apple User";
+      if (displayName && displayName !== "Apple User") {
+        await updateProfile(user, {
+          displayName: displayName
+        });
+      }
+
       // Check if user exists in Firestore
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
@@ -295,7 +303,8 @@ export default function ProfileScreen() {
         await setDoc(userRef, {
           uid: user.uid,
           email: user.email || "",
-          username: credential.fullName?.givenName || "Apple User",
+          username: displayName,
+          displayName: displayName, // Add displayName to Firestore as well
           provider: "apple",
           createdAt: new Date().toISOString(),
           gameStats: {

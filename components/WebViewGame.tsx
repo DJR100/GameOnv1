@@ -32,19 +32,15 @@ interface AttemptScore {
 }
 
 interface FinalScores {
-  type: "finalScores";
-  scores: number[]; // Array of all three scores
-  isComplete: true;
-  highestScore: number; // Highest score from all three attempts
-  attemptScores: {
-    attempt1: number;
-    attempt2: number;
-    attempt3: number;
-  };
-  allHighScores: {
-    sessionHighScore: number; // Highest score from this session
-    overallHighScore: number; // All-time high score
-  };
+  level: number;
+  totalFruit: number;
+  timestamp: string;
+}
+
+interface GameStatus {
+  practiceGamesLeft: number;
+  realGamesLeft: number;
+  lastPlayedDate: string | null;
 }
 
 type GameMessage = AttemptScore | FinalScores;
@@ -53,11 +49,19 @@ export default function WebViewGame({ url, gameType }: WebViewGameProps) {
   const [attempts, setAttempts] = useState<number[]>([]);
   const [isComplete, setIsComplete] = useState(false);
   const [sessionHighScore, setSessionHighScore] = useState<number | null>(null);
+  const [gameStatus, setGameStatus] = useState<GameStatus>({
+    practiceGamesLeft: 3,
+    realGamesLeft: 3,
+    lastPlayedDate: null
+  });
+  const [currentMode, setCurrentMode] = useState<'practice' | 'real'>('practice');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const webViewRef = useRef<WebView>(null);
   const [hasPlayed, setHasPlayed] = useState<boolean>(false);
   const navigation = useNavigation();
+  const [currentLevel, setCurrentLevel] = useState<number>(0);
+  const [totalFruit, setTotalFruit] = useState<number>(0);
 
   const handleAttemptScore = (data: AttemptScore) => {
     console.log(`Attempt ${data.attemptNumber} completed:`, {
@@ -77,155 +81,98 @@ export default function WebViewGame({ url, gameType }: WebViewGameProps) {
   };
 
   const handleFinalScores = async (data: FinalScores, uid: string) => {
-    console.log("Processing final game scores:", {
-      attempts: data.attemptScores,
-      highestScore: data.highestScore,
-      sessionHighScore: data.allHighScores.sessionHighScore,
-      overallHighScore: data.allHighScores.overallHighScore,
-    });
-
-    // Verify data integrity
-    if (!data.scores || data.scores.length !== 3) {
-      console.error("Invalid scores array:", data.scores);
+    if (!checkGameAvailability()) {
       return;
     }
 
-    // Preserve the original scores exactly as received
-    const originalScores = [...data.scores];
-    console.log("Original scores (unmodified):", originalScores);
-    
-    // Only sanitize to handle NaN or non-number values, not to cap
-    const sanitizedScores = data.scores.map(score => (
-      typeof score === 'number' && !isNaN(score) ? score : 0
-    ));
-    console.log("Sanitized scores (only fixing NaN):", sanitizedScores);
-    
-    // Verify highest score calculation
-    const calculatedMax = Math.max(...sanitizedScores);
-    console.log("Calculated max score:", calculatedMax, "type:", typeof calculatedMax);
-
     try {
-      // Create the data object to save, ensuring we don't modify the scores
-      const dataToSave = {
-        allScores: sanitizedScores,
-        attemptDetails: data.attemptScores,
-        highestScore: calculatedMax,
-        sessionHighScore: data.allHighScores.sessionHighScore,
-        overallHighScore: data.allHighScores.overallHighScore,
+      // Validate and ensure data has default values
+      const validatedData = {
+        level: data.level || 1,
+        totalFruit: data.totalFruit || 0,
         timestamp: new Date().toISOString(),
         isComplete: true,
+        gameType: gameType // Add gameType to the data
       };
       
-      // Log the exact data being sent to Firebase
-      console.log("Data being sent to Firebase:", JSON.stringify(dataToSave));
+      console.log("Data being sent to Firebase:", JSON.stringify(validatedData));
       
-      // Save to Firebase game stats
-      await updateUserGameStatsFirebase(uid, gameType, dataToSave);
+      await updateUserGameStatsFirebase(uid, gameType, validatedData);
       
-      // Also submit the high score to the leaderboard
-      try {
-        const user = auth.currentUser;
-        if (user) {
-          await submitScore({
-            playerName: user.displayName || 'Anonymous',
-            score: calculatedMax,
-            gameType: gameType,
-            timestamp: new Date(),
-            deviceId: uid
-          });
-          console.log("Score submitted to leaderboard:", calculatedMax);
-        }
-      } catch (leaderboardError) {
-        console.error("Error submitting to leaderboard:", leaderboardError);
-        // Don't throw here, we still want to continue even if leaderboard submission fails
-      }
-      
-      // Log after Firebase update
-      console.log("Firebase update completed");
+      // Only submit score for real games
+      if (currentMode === 'real') {
+        try {
+          const user = auth.currentUser;
+          if (user) {
+            // Get user document to check for additional name sources
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            const userData = userDoc.data();
+            
+            // Try multiple sources for the player name in order of preference
+            const playerName = user.displayName || // First try Firebase Auth displayName
+                             userData?.displayName || // Then try Firestore displayName
+                             userData?.username || // Then try Firestore username
+                             user.email?.split('@')[0] || // Then try email prefix
+                             'Anonymous'; // Last resort
 
-      // Reset state after successful save
-      setAttempts([]);
+            await submitScore({
+              score: validatedData.totalFruit,
+              gameType: gameType,
+              playerName: playerName,
+              timestamp: new Date(),
+              level: validatedData.level
+            });
+            console.log("Score submitted to leaderboard:", validatedData.totalFruit, "Level:", validatedData.level, "Player:", playerName);
+          }
+        } catch (leaderboardError) {
+          console.error("Error submitting to leaderboard:", leaderboardError);
+        }
+      }
+
+      // Update game attempts
+      await updateGameStatus(currentMode);
+      
+      console.log("Firebase update completed");
       setIsComplete(true);
-      setSessionHighScore(null);
       console.log("Game session saved successfully");
 
-      // Mark game as played
-      try {
-        const userRef = doc(db, "users", uid);
-        
-        // First check if the document exists
-        const userDoc = await getDoc(userRef);
-        
-        if (userDoc.exists()) {
-          // Update existing document
-          await updateDoc(userRef, {
-            [`gameStatus.${gameType}.hasPlayed`]: true,
-            [`gameStatus.${gameType}.completionDate`]: new Date().toISOString(),
-            [`gameStatus.${gameType}.attemptsUsed`]: 3
-          });
-          console.log(`Successfully marked ${gameType} as played for user ${uid}`);
-        } else {
-          // Document doesn't exist - create it with setDoc
-          await setDoc(userRef, {
-            gameStatus: {
-              [gameType]: {
-                hasPlayed: true,
-                completionDate: new Date().toISOString(),
-                attemptsUsed: 3
-              }
-            }
-          });
-          console.log(`Created new user document and marked ${gameType} as played for user ${uid}`);
-        }
-        
-        // Set local state to reflect the change
-        setHasPlayed(true);
-        
-      } catch (error: any) {
-        console.error("Error updating play status:", error);
-        // Show an error to the user
-        setError(`Failed to update game status: ${error.message || 'Unknown error'}`);
-      }
-    } catch (saveError) {
-      console.error("Error saving game stats:", saveError);
-      setError("Failed to save game progress");
+    } catch (error) {
+      console.error("Error saving game session:", error);
     }
   };
 
-  const handleMessage = async (event: any) => {
-    console.log("Raw message data:", event.nativeEvent.data);
-    
+  const handleMessage = (event: any) => {
     try {
-      // Parse the data without any transformations
-      const data = JSON.parse(event.nativeEvent.data) as GameMessage;
-      console.log("Parsed data:", data);
-      
-      const uid = auth.currentUser?.uid;
-      if (!uid) {
-        console.error("No user ID available - cannot process game data");
-        return;
-      }
+      const data = JSON.parse(event.nativeEvent.data);
+      console.log("Received message from game:", data);
 
-      switch (data.type) {
-        case "attemptScore":
-          // Log the raw score to verify no capping is happening
-          console.log("Raw attempt score:", data.score, "type:", typeof data.score);
-          handleAttemptScore(data);
-          break;
+      if (data.type === 'FINAL_SCORES' && auth.currentUser) {
+        // Validate the scores object structure
+        const scores = data.scores;
+        if (!scores || typeof scores.level !== 'number' || typeof scores.totalFruit !== 'number') {
+          console.error("Invalid score data received:", scores);
+          return;
+        }
+        
+        // Ensure timestamp is valid
+        const timestamp = scores.timestamp || new Date().toISOString();
+        if (!Date.parse(timestamp)) {
+          console.error("Invalid timestamp received:", timestamp);
+          return;
+        }
 
-        case "finalScores":
-          if (data.isComplete) {
-            // Log the raw scores array to verify no capping
-            console.log("Raw final scores:", data.scores, "types:", data.scores.map(s => typeof s));
-            await handleFinalScores(data, uid);
-          }
-          break;
-
-        default:
-          console.log("Unknown message type:", data);
+        handleFinalScores({
+          level: Math.max(1, Math.floor(scores.level)), // Ensure level is a positive integer
+          totalFruit: Math.max(0, Math.floor(scores.totalFruit)), // Ensure score is non-negative
+          timestamp: timestamp
+        }, auth.currentUser.uid);
+      } else if (data.type === 'UPDATE_LEVEL') {
+        setCurrentLevel(Math.max(1, Math.floor(data.level)));
+      } else if (data.type === 'UPDATE_FRUIT') {
+        setTotalFruit(Math.max(0, Math.floor(data.totalFruit)));
       }
     } catch (error) {
-      console.error("Error processing game message:", error);
+      console.error("Error handling message:", error);
     }
   };
 
@@ -350,6 +297,70 @@ export default function WebViewGame({ url, gameType }: WebViewGameProps) {
     );
   }
 
+  const loadGameStatus = async () => {
+    if (!auth.currentUser) return;
+
+    const userRef = doc(db, 'users', auth.currentUser.uid);
+    const userDoc = await getDoc(userRef);
+    const userData = userDoc.data();
+
+    if (userData?.gameStatus) {
+      setGameStatus(userData.gameStatus);
+    } else {
+      // Initialize game status if it doesn't exist
+      await updateDoc(userRef, {
+        gameStatus: {
+          practiceGamesLeft: 3,
+          realGamesLeft: 3,
+          lastPlayedDate: null
+        }
+      });
+    }
+  };
+
+  const updateGameStatus = async (mode: 'practice' | 'real') => {
+    if (!auth.currentUser) return;
+
+    const newStatus = {
+      ...gameStatus,
+      [mode === 'practice' ? 'practiceGamesLeft' : 'realGamesLeft']: 
+        mode === 'practice' ? gameStatus.practiceGamesLeft - 1 : gameStatus.realGamesLeft - 1,
+      lastPlayedDate: new Date().toISOString()
+    };
+
+    const userRef = doc(db, 'users', auth.currentUser.uid);
+    await updateDoc(userRef, {
+      gameStatus: newStatus
+    });
+
+    setGameStatus(newStatus);
+  };
+
+  const checkGameAvailability = () => {
+    if (currentMode === 'practice' && gameStatus.practiceGamesLeft <= 0) {
+      Alert.alert('No Practice Games Left', 'You have used all your practice attempts.');
+      return false;
+    }
+    if (currentMode === 'real' && gameStatus.realGamesLeft <= 0) {
+      Alert.alert('No Real Games Left', 'You have used all your real game attempts.');
+      return false;
+    }
+    return true;
+  };
+
+  if (!checkGameAvailability()) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.text}>
+          You have used all your {currentMode} game attempts.
+          {currentMode === 'practice' ? 
+            ' Try a real game!' : 
+            ' Come back tomorrow for more attempts!'}
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       {error ? (
@@ -388,6 +399,18 @@ export default function WebViewGame({ url, gameType }: WebViewGameProps) {
             style={styles.webview}
           />
           {loading && renderLoading()}
+          <View style={styles.modeSelector}>
+            <Text style={styles.modeText}>
+              Mode: {currentMode} ({currentMode === 'practice' ? 
+                `${gameStatus.practiceGamesLeft} practice games left` : 
+                `${gameStatus.realGamesLeft} real games left`})
+            </Text>
+            <Text style={styles.switchMode} onPress={() => {
+              setCurrentMode(current => current === 'practice' ? 'real' : 'practice');
+            }}>
+              Switch to {currentMode === 'practice' ? 'Real' : 'Practice'} Mode
+            </Text>
+          </View>
         </View>
       )}
     </SafeAreaView>
@@ -397,36 +420,42 @@ export default function WebViewGame({ url, gameType }: WebViewGameProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000",
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  text: {
+    color: '#fff',
+    fontSize: 18,
+    textAlign: 'center',
+    padding: 20,
   },
   webviewContainer: {
     flex: 1,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   webview: {
     flex: 1,
   },
   loadingContainer: {
-    position: "absolute",
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.8)',
   },
   loadingText: {
-    color: "#FFFFFF",
-    marginTop: 16,
-    fontSize: 16,
+    color: '#fff',
+    marginTop: 10,
   },
   errorContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 20,
-    backgroundColor: Colors.dark.background,
   },
   errorTitle: {
     color: Colors.dark.primary,
@@ -435,21 +464,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   errorText: {
-    color: Colors.dark.text,
-    fontSize: 16,
-    textAlign: "center",
-    marginBottom: 24,
+    color: '#ff4444',
+    textAlign: 'center',
+    marginBottom: 10,
   },
   reloadButton: {
-    backgroundColor: Colors.dark.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+    padding: 10,
+    backgroundColor: '#4CAF50',
+    borderRadius: 5,
   },
   reloadButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
+    color: '#fff',
   },
   lockedContainer: {
     flex: 1,
@@ -498,4 +523,20 @@ const styles = StyleSheet.create({
   disabledButton: {
     opacity: 0.6,
   },
+  modeSelector: {
+    padding: 10,
+    backgroundColor: '#1A1A1A',
+  },
+  modeText: {
+    color: '#fff',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  switchMode: {
+    color: '#4CAF50',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 5,
+    textDecorationLine: 'underline',
+  }
 });

@@ -14,8 +14,8 @@ export default function LeaderboardScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Hardcode the game type to Chroma Snake
-  const gameType = 'chromasnake';
+  // Hardcode the game type to Level Up
+  const gameType = 'levelup';
 
   // Fetch leaderboard data when component mounts
   useEffect(() => {
@@ -26,19 +26,20 @@ export default function LeaderboardScreen() {
     try {
       setLoading(true);
       setError(null);
-      console.log(`Fetching scores for Chroma Snake`);
-      // Get scores specifically for chromasnake
-      const scores = await getTopScores(gameType, 50);
+      console.log(`Fetching scores for Level Up`);
       
-      // Transform the data
+      const scores = await getTopScores('levelup', 50);
+      console.log('Raw scores from Firebase:', scores); // Debug log
+      
       const transformedScores = scores.map(score => ({
         ...score,
         timestamp: new Date(score.timestamp),
         playerName: score.playerName || 'Anonymous',
-        score: Number(score.score)
+        score: score.totalFruit || 0, // Ensure we always have a number
+        level: score.level || 1
       }));
       
-      console.log('Received scores:', transformedScores);
+      console.log('Transformed scores:', transformedScores); // Debug log
       setLeaderboard(transformedScores);
     } catch (err) {
       console.error('Error fetching leaderboard:', err);
@@ -94,6 +95,12 @@ export default function LeaderboardScreen() {
           ]}>
             {item.playerName}
           </ThemedText>
+          <ThemedText style={[
+            styles.levelText,
+            { color: positionColors.text }
+          ]}>
+            Level {item.level}
+          </ThemedText>
         </View>
         
         <View style={styles.scoreContainer}>
@@ -109,7 +116,7 @@ export default function LeaderboardScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style="light" />
       <View style={styles.header}>
         <Image 
@@ -262,6 +269,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     flexShrink: 1,
+  },
+  levelText: {
+    fontSize: 12,
+    opacity: 0.8,
+    marginTop: 2,
   },
   scoreContainer: {
     paddingHorizontal: 12,

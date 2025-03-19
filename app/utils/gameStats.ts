@@ -142,70 +142,54 @@ interface GameScoreData {
 }
 
 export const updateUserGameStatsFirebase = async (uid: string, gameType: string, stats: any) => {
-  console.log("updateUserGameStatsFirebase called with stats:", stats);
-  
-  // Log the scores specifically
-  console.log("Scores being saved to Firebase:", stats.allScores);
-  
   try {
     console.log('Starting to save game session to Firebase...', { uid, gameType, stats });
-    const gameRef = doc(db, "games", gameType, "scores", uid);
     
-    // First, check if document exists
-    const docSnap = await getDoc(gameRef);
-    console.log('Existing document found:', docSnap.exists());
-    
-    if (!docSnap.exists()) {
-      // First time playing - create new document
-      console.log('Creating new game session record');
-      await setDoc(gameRef, {
-        ...stats,
-        lastUpdated: new Date().toISOString(),
-        attempts: [{
-          scores: stats.allScores,
-          attemptDetails: stats.attemptDetails,
-          highestScore: stats.highestScore,
-          timestamp: stats.timestamp
-        }],
-        stats: {
-          gamesPlayed: 1,
-          bestScore: stats.highestScore,
-          lastPlayed: stats.timestamp
+    // Create a clean data object with only the fields we want to store
+    const cleanData = {
+      level: stats.level || 1,
+      totalFruit: stats.totalFruit || 0,
+      timestamp: stats.timestamp || new Date().toISOString(),
+      isComplete: true,
+      userId: uid
+    };
+
+    // Save to the scores collection
+    const scoreRef = doc(db, "scores", `${uid}_${Date.now()}`);
+    await setDoc(scoreRef, {
+      ...cleanData,
+      gameType: gameType
+    });
+
+    // Update user's stats in their user document
+    const userRef = doc(db, "users", uid);
+    const userDoc = await getDoc(userRef);
+
+    if (userDoc.exists()) {
+      // Update existing user document
+      await updateDoc(userRef, {
+        [`gameStats.${gameType}`]: {
+          lastPlayed: new Date().toISOString(),
+          highScore: Math.max(stats.totalFruit, userDoc.data()?.gameStats?.[gameType]?.highScore || 0),
+          highestLevel: Math.max(stats.level, userDoc.data()?.gameStats?.[gameType]?.highestLevel || 0),
+          totalGamesPlayed: (userDoc.data()?.gameStats?.[gameType]?.totalGamesPlayed || 0) + 1
         }
       });
     } else {
-      // Existing player - update with new attempt
-      const existingData = docSnap.data() as any;
-      const currentHighScore = existingData.stats?.bestScore || 0;
-      
-      // Prepare the new attempt data
-      const newAttempt = {
-        scores: stats.allScores,
-        attemptDetails: stats.attemptDetails,
-        highestScore: stats.highestScore,
-        timestamp: stats.timestamp
-      };
-
-      // Update the document
-      await setDoc(gameRef, {
-        allScores: stats.allScores,
-        attemptDetails: stats.attemptDetails,
-        highestScore: stats.highestScore,
-        sessionHighScore: stats.sessionHighScore,
-        overallHighScore: Math.max(currentHighScore, stats.highestScore),
-        lastUpdated: new Date().toISOString(),
-        attempts: [...(existingData.attempts || []), newAttempt],
-        stats: {
-          gamesPlayed: (existingData.stats?.gamesPlayed || 0) + 1,
-          bestScore: Math.max(currentHighScore, stats.highestScore),
-          lastPlayed: stats.timestamp
+      // Create new user document
+      await setDoc(userRef, {
+        gameStats: {
+          [gameType]: {
+            lastPlayed: new Date().toISOString(),
+            highScore: stats.totalFruit,
+            highestLevel: stats.level,
+            totalGamesPlayed: 1
+          }
         }
-      }, { merge: true });
-
-      console.log('Game session updated with new attempt');
+      });
     }
-    
-    console.log('Game session saved successfully');
+
+    console.log('Successfully saved game session to Firebase');
     return true;
   } catch (error) {
     console.error('Error saving game session:', error);
