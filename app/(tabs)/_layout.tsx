@@ -14,7 +14,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      initialRouteName="game"
+      initialRouteName="profile"
       screenOptions={{
         tabBarActiveTintColor: Colors['dark'].tint,
         headerShown: false,

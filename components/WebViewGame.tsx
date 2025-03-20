@@ -394,6 +394,12 @@ export default function WebViewGame({ url, gameType }: WebViewGameProps) {
             incognito={false} // Set to true if you want each load to be fresh
             injectedJavaScript={`
               window.ReactNativeWebView = window.ReactNativeWebView || {};
+              // Inform the webpage about the container size
+              document.body.style.width = '100vw';
+              document.body.style.height = '100vh';
+              document.body.style.margin = '0';
+              document.body.style.padding = '0';
+              document.body.style.overflow = 'hidden';
               true;
             `}
             style={styles.webview}
@@ -423,6 +429,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     justifyContent: 'center',
     alignItems: 'center',
+    width: '100%',
+    height: '100%',
   },
   text: {
     color: '#fff',
@@ -432,10 +440,14 @@ const styles = StyleSheet.create({
   },
   webviewContainer: {
     flex: 1,
+    width: '100%',
+    height: '100%',
     overflow: 'hidden',
   },
   webview: {
     flex: 1,
+    width: '100%',
+    height: '100%',
   },
   loadingContainer: {
     position: 'absolute',

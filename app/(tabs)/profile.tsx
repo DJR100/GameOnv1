@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Image, ScrollView } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithCredential, updateProfile, OAuthProvider } from 'firebase/auth';
+import { onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithCredential, updateProfile } from 'firebase/auth';
 import { auth, db } from '@/firebase/config';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
@@ -13,7 +13,6 @@ import DeleteAccountButton from '../components/DeleteAccountButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { Tabs } from 'expo-router';
-import * as AppleAuthentication from 'expo-apple-authentication';
 
 // Initialize WebBrowser for OAuth
 WebBrowser.maybeCompleteAuthSession();
@@ -101,6 +100,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [username, setUsername] = useState('');
+  const [initialLoad, setInitialLoad] = useState(true);
   const router = useRouter();
 
   // Set up Google Auth Request
@@ -114,13 +114,23 @@ export default function ProfileScreen() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
+      
+      // If this is the initial load and user is not logged in, show the Create Account form
+      if (initialLoad) {
+        setInitialLoad(false);
+        if (!currentUser) {
+          setShowAuthForm(true);
+          setIsLogin(false); // Set to sign up mode, not login mode
+        } else {
+          setShowAuthForm(false);
+        }
+      } else if (currentUser) {
         setShowAuthForm(false);
       }
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [initialLoad]);
 
   useEffect(() => {
     handleSignInResponse();
@@ -260,71 +270,6 @@ export default function ProfileScreen() {
       }
     } catch (error) {
       console.error('Error checking pending score:', error);
-    }
-  };
-
-  const handleAppleSignIn = async () => {
-    try {
-      const credential = await AppleAuthentication.signInAsync({
-        requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL,
-        ],
-      });
-
-      if (!credential.identityToken) {
-        throw new Error("No identity token returned");
-      }
-
-      // Create an OAuthProvider credential
-      const provider = new OAuthProvider('apple.com');
-      const oauthCredential = provider.credential({
-        idToken: credential.identityToken,
-      });
-
-      // Sign in with Firebase
-      const userCredential = await signInWithCredential(auth, oauthCredential);
-      const user = userCredential.user;
-
-      // Set the display name in Firebase Auth if we have it
-      const displayName = credential.fullName?.givenName || credential.fullName?.familyName || "Apple User";
-      if (displayName && displayName !== "Apple User") {
-        await updateProfile(user, {
-          displayName: displayName
-        });
-      }
-
-      // Check if user exists in Firestore
-      const userRef = doc(db, "users", user.uid);
-      const userSnap = await getDoc(userRef);
-
-      if (!userSnap.exists()) {
-        // Store user details in Firestore
-        await setDoc(userRef, {
-          uid: user.uid,
-          email: user.email || "",
-          username: displayName,
-          displayName: displayName, // Add displayName to Firestore as well
-          provider: "apple",
-          createdAt: new Date().toISOString(),
-          gameStats: {
-            totalGames: 0,
-            personalBest: {
-              currentStreak: 0,
-              longestStreak: 1,
-              currentPosition: 0,
-              highScore: 0,
-              lastPlayed: null
-            }
-          }
-        });
-      }
-
-      console.log('Signed in with Apple:', user);
-      await handleSuccessfulAuth();
-
-    } catch (error) {
-      console.error('Apple Sign In Error:', error);
     }
   };
 
@@ -579,20 +524,9 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.buttonContainer}>
-          <View style={[styles.appleButtonContainer, { backgroundColor: '#FF4B4B' }]}>
-            <AppleAuthentication.AppleAuthenticationButton
-              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
-              cornerRadius={12}
-              style={[styles.authButton]}
-              onPress={handleAppleSignIn}
-            />
-          </View>
-
           <TouchableOpacity
             style={[styles.authButton, {
               backgroundColor: colors.primary,
-              marginTop: 12,
               shadowColor: colors.primary,
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.2,
@@ -605,6 +539,24 @@ export default function ProfileScreen() {
             }}
           >
             <Text style={[styles.buttonText, { color: '#fff' }]}>Create Account</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.authButton, {
+              backgroundColor: '#333',
+              marginTop: 12,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.2,
+              shadowRadius: 4,
+              elevation: 8,
+            }]}
+            onPress={() => {
+              setIsLogin(true);
+              setShowAuthForm(true);
+            }}
+          >
+            <Text style={[styles.buttonText, { color: '#fff' }]}>Log In</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -848,15 +800,6 @@ const styles = StyleSheet.create({
   footerLink: {
     fontSize: 14,
     fontWeight: '600',
-  },
-  appleButtonContainer: {
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: '#FF4B4B',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 8,
   },
   statsContainer: {
     marginTop: 20,

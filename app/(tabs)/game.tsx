@@ -6,6 +6,7 @@ import {
   SafeAreaView,
   Platform,
   Image,
+  Text,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { Colors } from "@/constants/Colors";
@@ -25,45 +26,41 @@ export default function GameScreen() {
   const renderGameMenu = () => (
     <View style={styles.menuContainer}>
       <View style={styles.titleContainer}>
-        <Image 
-          source={require('@/assets/images/icon.png')} 
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <ThemedText style={styles.signInText}>Sign-in First to Submit High Score</ThemedText>
+        <ThemedText style={styles.titleText}>GAME <Text style={{color: '#FF3333'}}>ON</Text></ThemedText>
+        <ThemedText style={styles.subtitle}>Play Daily. Win Big.</ThemedText>
       </View>
 
-      <View style={styles.gameButtonsContainer}>
-        {/* 
-        <TouchableOpacity
-          style={[styles.gameButton, { backgroundColor: colors.primary }]}
-          onPress={() => setCurrentGame("shooter")}
-        >
-          <ThemedText style={styles.gameButtonText}>Retro Shooter</ThemedText>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.gameButton, { backgroundColor: colors.secondary }]}
-          onPress={() => setCurrentGame("pong")}
-        >
-          <ThemedText style={styles.gameButtonText}>Pong</ThemedText>
-        </TouchableOpacity>
-        */}
-
-        <TouchableOpacity
-          style={[styles.gameButton, { backgroundColor: '#4CAF50' }]}
-          onPress={() => setCurrentGame("scoreGenerator")}
-        >
-          <ThemedText style={[styles.gameButtonText, { color: 'white' }]}>LevelUp</ThemedText>
-          <ThemedText style={[styles.clickToPlayText, { color: 'white' }]}>Click Here to Play</ThemedText>
-        </TouchableOpacity>
+      <View style={styles.howToPlayContainer}>
+        <ThemedText style={styles.howToPlayTitle}>HOW TO PLAY</ThemedText>
+        
+        <View style={styles.instructionRow}>
+          <View style={[styles.numberBubble, {backgroundColor: '#FF3333'}]}>
+            <Text style={styles.numberText}>1</Text>
+          </View>
+          <ThemedText style={styles.instructionText}>3 Attempts to practice</ThemedText>
+        </View>
+        
+        <View style={styles.instructionRow}>
+          <View style={[styles.numberBubble, {backgroundColor: '#4CAF50'}]}>
+            <Text style={styles.numberText}>2</Text>
+          </View>
+          <ThemedText style={styles.instructionText}>3 Attempts to set your high score</ThemedText>
+        </View>
+        
+        <View style={styles.instructionRow}>
+          <View style={[styles.numberBubble, {backgroundColor: '#2196F3'}]}>
+            <Text style={styles.numberText}>3</Text>
+          </View>
+          <ThemedText style={styles.instructionText}>New game every 24 hours</ThemedText>
+        </View>
       </View>
       
-      <View style={[styles.footerContainer, { backgroundColor: '#FF3333' }]}>
-        <ThemedText style={styles.footerText}>$5 Entry Fee</ThemedText>
-        <ThemedText style={styles.footerText}>🥇 Winner Takes All</ThemedText>
-        <ThemedText style={styles.footerText}>Current Prize Pool: $100</ThemedText>
-      </View>
+      <TouchableOpacity
+        style={styles.playButton}
+        onPress={() => setCurrentGame("scoreGenerator")}
+      >
+        <ThemedText style={styles.prizeText}>Top 3 players win Prizes Daily</ThemedText>
+      </TouchableOpacity>
     </View>
   );
 
@@ -88,7 +85,9 @@ export default function GameScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
     >
       <StatusBar style="light" />
-      {renderGame()}
+      <View style={styles.gameContainer}>
+        {renderGame()}
+      </View>
       {showHomeOverlay && currentGame === "shooter" && (
         <HomeOverlay 
           onClose={() => {
@@ -104,59 +103,87 @@ export default function GameScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  gameContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
   },
   menuContainer: {
     flex: 1,
-    justifyContent: "flex-start",
+    justifyContent: "space-between", 
     alignItems: "center",
-    padding: 20,
-    paddingTop: 20,
+    width: '100%',
+    paddingHorizontal: 20,
+    paddingVertical: 30,
   },
   titleContainer: {
     alignItems: "center",
-    marginBottom: 20,
-    marginTop: 0,
-    zIndex: 10,
+    width: '100%',
+    marginTop: 40,
   },
-  logo: {
-    width: 500,
-    height: 220,
-    marginBottom: 10,
+  titleText: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 24,
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
-    opacity: 0.8,
-    marginTop: 10,
-  },
-  signInText: {
-    fontSize: 16,
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
-    opacity: 0.8,
-    marginTop: 10,
-  },
-  gameButtonsContainer: {
-    width: "100%",
-    gap: 20,
-  },
-  gameButton: {
-    width: "100%",
-    padding: 20,
-    borderRadius: 10,
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.3)",
-  },
-  gameButtonText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
-  },
-  clickToPlayText: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
     marginTop: 5,
-    opacity: 0.8,
+  },
+  howToPlayContainer: {
+    width: '100%',
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#FF3333',
+    borderRadius: 16,
+    padding: 20,
+    marginVertical: 20,
+  },
+  howToPlayTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  instructionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  numberBubble: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  numberText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  instructionText: {
+    fontSize: 16,
+    flex: 1,
+  },
+  playButton: {
+    width: '100%',
+    backgroundColor: '#FFEB3B',
+    paddingVertical: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  prizeText: {
+    color: 'black',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   footerContainer: {
     position: "absolute",

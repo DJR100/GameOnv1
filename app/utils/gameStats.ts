@@ -1,6 +1,7 @@
 import { doc, updateDoc, increment, getDoc, collection, query, orderBy, getDocs, setDoc } from "firebase/firestore";
 import { db } from "@/firebase/config";
 import { getDatabase, ref, set } from 'firebase/database';
+import { auth } from "@/firebase/config";
 
 export interface GameStats {
   totalGames: number;
@@ -145,13 +146,33 @@ export const updateUserGameStatsFirebase = async (uid: string, gameType: string,
   try {
     console.log('Starting to save game session to Firebase...', { uid, gameType, stats });
     
+    // Get user information for playerName
+    let playerName = 'Anonymous';
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        const userDoc = await getDoc(doc(db, "users", uid));
+        const userData = userDoc.data();
+        
+        // Try multiple sources for the player name in order of preference
+        playerName = user.displayName || // First try Firebase Auth displayName
+                    userData?.displayName || // Then try Firestore displayName
+                    userData?.username || // Then try Firestore username
+                    user.email?.split('@')[0] || // Then try email prefix
+                    'Anonymous'; // Last resort
+      }
+    } catch (nameError) {
+      console.error("Error getting player name:", nameError);
+    }
+    
     // Create a clean data object with only the fields we want to store
     const cleanData = {
       level: stats.level || 1,
       totalFruit: stats.totalFruit || 0,
       timestamp: stats.timestamp || new Date().toISOString(),
       isComplete: true,
-      userId: uid
+      userId: uid,
+      playerName: playerName // Add playerName to the scores document
     };
 
     // Save to the scores collection
@@ -160,6 +181,8 @@ export const updateUserGameStatsFirebase = async (uid: string, gameType: string,
       ...cleanData,
       gameType: gameType
     });
+    
+    console.log('Score saved with player name:', playerName);
 
     // Update user's stats in their user document
     const userRef = doc(db, "users", uid);
