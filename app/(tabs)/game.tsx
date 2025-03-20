@@ -20,47 +20,50 @@ type GameState = "menu" | "shooter" | "pong" | "scoreGenerator";
 
 export default function GameScreen() {
   const colors = Colors["dark"];
-  const [currentGame, setCurrentGame] = useState<GameState>("shooter");
-  const [showHomeOverlay, setShowHomeOverlay] = useState(true);
+  const [currentGame, setCurrentGame] = useState<GameState>("menu");
+  const [showHomeOverlay, setShowHomeOverlay] = useState(false);
 
   const renderGameMenu = () => (
     <View style={styles.menuContainer}>
       <View style={styles.titleContainer}>
-        <ThemedText style={styles.titleText}>GAME <Text style={{color: '#FF3333'}}>ON</Text></ThemedText>
-        <ThemedText style={styles.subtitle}>Play Daily. Win Big.</ThemedText>
+        <Image 
+          source={require('@/assets/images/icon.png')} 
+          style={styles.logo}
+          resizeMode="contain"
+        />
+        <ThemedText style={styles.signInText}>Sign-in First to Submit High Score</ThemedText>
       </View>
 
-      <View style={styles.howToPlayContainer}>
-        <ThemedText style={styles.howToPlayTitle}>HOW TO PLAY</ThemedText>
+      <View style={styles.gameButtonsContainer}>
+        {/* 
+        <TouchableOpacity
+          style={[styles.gameButton, { backgroundColor: colors.primary }]}
+          onPress={() => setCurrentGame("shooter")}
+        >
+          <ThemedText style={styles.gameButtonText}>Retro Shooter</ThemedText>
+        </TouchableOpacity>
         
-        <View style={styles.instructionRow}>
-          <View style={[styles.numberBubble, {backgroundColor: '#FF3333'}]}>
-            <Text style={styles.numberText}>1</Text>
-          </View>
-          <ThemedText style={styles.instructionText}>3 Attempts to practice</ThemedText>
-        </View>
-        
-        <View style={styles.instructionRow}>
-          <View style={[styles.numberBubble, {backgroundColor: '#4CAF50'}]}>
-            <Text style={styles.numberText}>2</Text>
-          </View>
-          <ThemedText style={styles.instructionText}>3 Attempts to set your high score</ThemedText>
-        </View>
-        
-        <View style={styles.instructionRow}>
-          <View style={[styles.numberBubble, {backgroundColor: '#2196F3'}]}>
-            <Text style={styles.numberText}>3</Text>
-          </View>
-          <ThemedText style={styles.instructionText}>New game every 24 hours</ThemedText>
-        </View>
+        <TouchableOpacity
+          style={[styles.gameButton, { backgroundColor: colors.secondary }]}
+          onPress={() => setCurrentGame("pong")}
+        >
+          <ThemedText style={styles.gameButtonText}>Pong</ThemedText>
+        </TouchableOpacity>
+        */}
+
+        <TouchableOpacity
+          style={[styles.gameButton, { backgroundColor: '#4CAF50' }]}
+          onPress={() => setCurrentGame("scoreGenerator")}
+        >
+          <ThemedText style={[styles.gameButtonText, { color: 'white' }]}>LevelUp</ThemedText>
+          <ThemedText style={[styles.clickToPlayText, { color: 'white' }]}>Click Here to Play</ThemedText>
+        </TouchableOpacity>
       </View>
       
-      <TouchableOpacity
-        style={styles.playButton}
-        onPress={() => setCurrentGame("scoreGenerator")}
-      >
-        <ThemedText style={styles.prizeText}>Top 3 players win Prizes Daily</ThemedText>
-      </TouchableOpacity>
+      <View style={[styles.footerContainer, { backgroundColor: '#FF3333' }]}>
+        <ThemedText style={styles.footerText}>Daily Tournament</ThemedText>
+        <ThemedText style={styles.footerText}>🥇 Top 3 Win Daily Prizes</ThemedText>
+      </View>
     </View>
   );
 
@@ -113,7 +116,7 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     flex: 1,
-    justifyContent: "space-between", 
+    justifyContent: "flex-start",
     alignItems: "center",
     width: '100%',
     paddingHorizontal: 20,
@@ -123,88 +126,47 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: '100%',
     marginTop: 40,
+    marginBottom: 40,
   },
-  titleText: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 18,
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
-    marginTop: 5,
-  },
-  howToPlayContainer: {
-    width: '100%',
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: '#FF3333',
-    borderRadius: 16,
-    padding: 20,
-    marginVertical: 20,
-  },
-  howToPlayTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 15,
-  },
-  instructionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  numberBubble: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  numberText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  instructionText: {
-    fontSize: 16,
-    flex: 1,
-  },
-  playButton: {
-    width: '100%',
-    backgroundColor: '#FFEB3B',
-    paddingVertical: 15,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+  logo: {
+    width: 180,
+    height: 180,
     marginBottom: 20,
   },
-  prizeText: {
-    color: 'black',
-    fontSize: 18,
-    fontWeight: 'bold',
+  signInText: {
+    fontSize: 16,
+    color: '#ffffff',
+    marginTop: 5,
   },
-  footerContainer: {
-    position: "absolute",
-    bottom: 200,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    paddingBottom: 10,
-    paddingTop: 10,
-    paddingHorizontal: 20,
+  gameButtonsContainer: {
+    width: '100%',
+    marginBottom: 40,
+  },
+  gameButton: {
+    width: '100%',
+    padding: 20,
     borderRadius: 10,
-    marginHorizontal: 20,
+    alignItems: "center",
     borderWidth: 2,
     borderColor: "rgba(255,255,255,0.3)",
   },
-  footerTitle: {
+  gameButtonText: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "white",
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
-    marginBottom: 10,
+  },
+  clickToPlayText: {
+    fontSize: 16,
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    marginTop: 5,
+    opacity: 0.8,
+  },
+  footerContainer: {
+    padding: 15,
+    borderRadius: 10,
+    width: '100%',
+    alignItems: "center",
+    marginBottom: 20,
   },
   footerText: {
     fontSize: 18,

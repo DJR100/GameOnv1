@@ -20,6 +20,7 @@ import { useNavigation } from "@react-navigation/native";
 interface WebViewGameProps {
   url: string;
   gameType: string;
+  skipIntro?: boolean;
 }
 
 interface AttemptScore {
@@ -45,7 +46,7 @@ interface GameStatus {
 
 type GameMessage = AttemptScore | FinalScores;
 
-export default function WebViewGame({ url, gameType }: WebViewGameProps) {
+export default function WebViewGame({ url, gameType, skipIntro = false }: WebViewGameProps) {
   const [attempts, setAttempts] = useState<number[]>([]);
   const [isComplete, setIsComplete] = useState(false);
   const [sessionHighScore, setSessionHighScore] = useState<number | null>(null);
@@ -62,6 +63,7 @@ export default function WebViewGame({ url, gameType }: WebViewGameProps) {
   const navigation = useNavigation();
   const [currentLevel, setCurrentLevel] = useState<number>(0);
   const [totalFruit, setTotalFruit] = useState<number>(0);
+  const [isProcessingScore, setIsProcessingScore] = useState(false);
 
   const handleAttemptScore = (data: AttemptScore) => {
     console.log(`Attempt ${data.attemptNumber} completed:`, {
@@ -85,7 +87,16 @@ export default function WebViewGame({ url, gameType }: WebViewGameProps) {
       return;
     }
 
+    // Prevent double processing
+    if (isProcessingScore || isComplete) {
+      console.log("Already processing or completed this game session, ignoring duplicate");
+      return;
+    }
+
     try {
+      // Set flag to prevent duplicate processing
+      setIsProcessingScore(true);
+      
       // Validate and ensure data has default values
       const validatedData = {
         level: data.level || 1,
@@ -97,38 +108,9 @@ export default function WebViewGame({ url, gameType }: WebViewGameProps) {
       
       console.log("Data being sent to Firebase:", JSON.stringify(validatedData));
       
+      // This function already saves to the scores collection with player name
       await updateUserGameStatsFirebase(uid, gameType, validatedData);
       
-      // Only submit score for real games
-      if (currentMode === 'real') {
-        try {
-          const user = auth.currentUser;
-          if (user) {
-            // Get user document to check for additional name sources
-            const userDoc = await getDoc(doc(db, 'users', user.uid));
-            const userData = userDoc.data();
-            
-            // Try multiple sources for the player name in order of preference
-            const playerName = user.displayName || // First try Firebase Auth displayName
-                             userData?.displayName || // Then try Firestore displayName
-                             userData?.username || // Then try Firestore username
-                             user.email?.split('@')[0] || // Then try email prefix
-                             'Anonymous'; // Last resort
-
-            await submitScore({
-              score: validatedData.totalFruit,
-              gameType: gameType,
-              playerName: playerName,
-              timestamp: new Date(),
-              level: validatedData.level
-            });
-            console.log("Score submitted to leaderboard:", validatedData.totalFruit, "Level:", validatedData.level, "Player:", playerName);
-          }
-        } catch (leaderboardError) {
-          console.error("Error submitting to leaderboard:", leaderboardError);
-        }
-      }
-
       // Update game attempts
       await updateGameStatus(currentMode);
       
@@ -138,6 +120,9 @@ export default function WebViewGame({ url, gameType }: WebViewGameProps) {
 
     } catch (error) {
       console.error("Error saving game session:", error);
+    } finally {
+      // Reset processing flag when done
+      setIsProcessingScore(false);
     }
   };
 
@@ -253,6 +238,47 @@ export default function WebViewGame({ url, gameType }: WebViewGameProps) {
     
     checkPlayStatus();
   }, [gameType]);
+
+  // Inject script to skip intro if skipIntro is true
+  useEffect(() => {
+    if (skipIntro && webViewRef.current) {
+      // This will run after the WebView has loaded
+      webViewRef.current.injectJavaScript(`
+        // This script attempts to automatically start the game or skip intro
+        (function() {
+          // Look for common button selectors that might start the game
+          const startButtons = document.querySelectorAll('button, .start-button, .play-button, [role="button"]');
+          
+          // Click the first visible button that might be a start button
+          for (const button of startButtons) {
+            if (button.offsetParent !== null) { // Check if element is visible
+              console.log('Auto-clicking start button');
+              button.click();
+              break;
+            }
+          }
+          
+          // This function will keep trying to find and click start buttons
+          function tryToStartGame() {
+            const startButtons = document.querySelectorAll('button, .start-button, .play-button, [role="button"]');
+            for (const button of startButtons) {
+              if (button.offsetParent !== null) {
+                console.log('Auto-clicking start button (retry)');
+                button.click();
+                break;
+              }
+            }
+          }
+          
+          // Try a few times with a delay between attempts
+          setTimeout(tryToStartGame, 500);
+          setTimeout(tryToStartGame, 1000);
+          setTimeout(tryToStartGame, 2000);
+        })();
+        true;
+      `);
+    }
+  }, [skipIntro, loading]);
 
   // Render locked screen if already played
   if (hasPlayed) {

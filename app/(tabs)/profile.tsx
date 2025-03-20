@@ -408,7 +408,7 @@ export default function ProfileScreen() {
           <View style={styles.profileHeader}>
             <View style={styles.profileImageContainer}>
               <Image
-                source={{ uri: user.photoURL || 'https://example.com/default-profile.jpg' }}
+                source={require('@/assets/images/icon.png')}
                 style={styles.profileImage}
               />
             </View>
@@ -580,15 +580,13 @@ const styles = StyleSheet.create({
   profileImageContainer: {
     padding: 3,
     borderRadius: 50,
-    backgroundColor: '#4CAF50',
+    backgroundColor: 'transparent',
     marginBottom: 15,
   },
   profileImage: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    borderWidth: 3,
-    borderColor: '#000',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
   profileName: {
     fontSize: 24,
